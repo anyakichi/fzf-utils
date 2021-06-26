@@ -1,0 +1,227 @@
+#!/bin/bash
+
+set -o pipefail
+
+# shellcheck source=./_fzf-state
+. "${0%/*}/_fzf-state"
+
+FZF_GIT_OPTS="${FZF_GIT_OPTS:=--height 50%}"
+
+git_diff() {
+    case "$1" in
+    view)
+        local args=()
+
+        if [[ ${S[mode]} == "file" ]]; then
+            export LESS=-KMRc
+            if command -v bat &>/dev/null; then
+                bat --plain --color=always --paging=always "${@:2}"
+            else
+                less "${@:2}"
+            fi
+        else
+            if [[ ${S[mode]} == "cached" ]]; then
+                args+=(--cached)
+            fi
+
+            echo git diff "${args[@]}" "${@:2}"
+            git diff --color=always "${args[@]}" "${@:2}" |
+                sed 1,4d | less -KMRc
+        fi
+        ;;
+    cycle-mode)
+        if [[ ${S[mode]} == "cached" ]]; then
+            S[mode]="file"
+        elif [[ ${S[mode]} == "file" ]]; then
+            S[mode]="diff"
+        else
+            S[mode]="cached"
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+}
+
+git_files() {
+    local -A files=()
+
+    while IFS=$'\n' read -r line; do
+        echo "$line"
+        files["${line# [^ ]* }"]=1
+    done < <(git -c color.status=always status --short --branch)
+
+    while IFS=$'\n' read -r line; do
+        if [[ ${files["$line"]} != 1 ]]; then
+            echo " H $line"
+        fi
+    done < <(git ls-files)
+}
+
+git_log() {
+    case "$1" in
+    view)
+        args=()
+
+        if [[ ${S[graph]} == true ]]; then
+            args+=(--graph)
+        fi
+
+        if [[ ${S[target]} ]]; then
+            # S[target] is already escaped
+            # shellcheck disable=SC2206
+            args+=(${S[target]})
+        fi
+
+        git -c core.pager="less -+F -KMc" log --date=short --color=always \
+            --format="%C(blue)%C(bold)%cd %C(cyan)%<(8,trunc)%aL %C(auto)%d %s %C(240)%h" \
+            "${args[@]}" "${@:2}"
+        ;;
+    files)
+        exec tview "$0" log _files
+        ;;
+    _files)
+        if res=$("$0" file --no-height); then
+            S[target]=
+            if [[ $res ]]; then
+                while IFS=$'\n' read -r line; do
+                    S[target]+="$(printf "%q " "$line")"
+                done <<<"$res"
+            fi
+        fi
+        ;;
+    switch)
+        exec tview "$0" log _switch
+        ;;
+    _switch)
+        if res=$("$0" branch --no-height); then
+            S[target]=
+            if [[ $res ]]; then
+                S[target]="$(printf "%q" "$res")"
+            fi
+        fi
+        ;;
+    toggle-graph)
+        if [[ ${S[graph]} == true ]]; then
+            S[graph]="false"
+        else
+            S[graph]="true"
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+}
+
+fzf-branch() {
+    local view
+    view="'$0' log view \$(sed s/^..// <<< {} | cut -d' ' -f1)"
+
+    git branch -a --color=always | grep -v '/HEAD\s' |
+        fzf ${FZF_GIT_OPTS} --ansi --multi --preview-window right:70% \
+            --bind "ctrl-q:print-query" \
+            --bind "ctrl-r:execute-silent('$0' log toggle-graph)+refresh-preview" \
+            --bind "ctrl-t:execute:tview $view" \
+            --preview "$view | head -n 500" \
+            "$@" |
+        sed 's/^..//' | cut -d' ' -f1 |
+        sed 's#^remotes/##'
+}
+
+fzf-file() {
+    local view
+    view="'$0' diff view -- {-1}"
+
+    "$0" files |
+        fzf ${FZF_GIT_OPTS} -m --ansi --header-lines 1 --nth 2..,.. \
+            --header ":: C-r: cycle format" \
+            --bind "ctrl-q:print-query" \
+            --bind "ctrl-r:execute-silent('$0' diff cycle-mode)+refresh-preview" \
+            --bind "ctrl-t:execute:tview $view" \
+            --preview "$view | head -n 500" \
+            "$@" |
+        sed -e 's/^...//' -e 's/.* -> //'
+}
+
+fzf-hash() {
+    local view
+    view="git -c core.pager='less -+F -KMc' show --color=always --patch-with-stat \$(grep -o '[a-f0-9]\{7,\}$' <<< {})"
+
+    "$0" log view "$@" |
+        fzf ${FZF_GIT_OPTS} --ansi --no-sort --reverse --multi --tiebreak=index \
+            --header ":: C-s: toggle sort; C-r: toggle graph; C-x: switch branch; C-d: limit files" \
+            --bind 'ctrl-s:toggle-sort' \
+            --bind "ctrl-d:execute-silent('$0' log files)+reload('$0' log view)" \
+            --bind "ctrl-r:execute-silent('$0' log toggle-graph)+reload('$0' log view)" \
+            --bind "ctrl-t:execute:tview $view" \
+            --bind "ctrl-x:execute('$0' log switch)+reload('$0' log view)" \
+            --preview "$view | head -n 500" |
+        grep -o "[a-f0-9]\{7,\}$"
+}
+
+fzf-remote() {
+    local view
+    view="'$0' log view {1}"
+
+    git remote -v | awk '{print $1 "\t" $2}' | uniq |
+        fzf ${FZF_GIT_OPTS} --tac \
+            --bind "ctrl-r:execute-silent('$0' log toggle-graph)+refresh-preview" \
+            --bind "ctrl-t:execute:tview $view" \
+            --preview "$view | head -n 500" |
+        cut -d$'\t' -f1
+}
+
+fzf-stash() {
+    local view
+    view="git -c core.pager='less -+F -KMc' stash show -p --stat --color=always \$(cut -d: -f1 <<< {})"
+
+    git stash list |
+        fzf ${FZF_GIT_OPTS} --ansi --no-sort --reverse --multi --bind 'ctrl-s:toggle-sort' \
+            --bind "ctrl-t:execute:tview $view" \
+            --preview "$view | head -n 500" |
+        cut -d ':' -f1
+}
+
+fzf-tag() {
+    local view
+    view="git -c core.pager='less -+F -KMc' show --color=always {}"
+
+    git tag --sort -version:refname |
+        fzf ${FZF_GIT_OPTS} --multi --preview-window right:70% \
+            --bind "ctrl-t:execute:tview $view" \
+            --preview "$view | head -n 500"
+}
+
+export TVIEW_ENV_VARS="FZF_DEFAULT_OPTS FZF_STATE"
+
+case "$1" in
+branch)
+    fzf-branch "${@:2}"
+    ;;
+diff)
+    git_diff "${@:2}"
+    ;;
+file)
+    fzf-file "${@:2}"
+    ;;
+files)
+    git_files "${@:2}"
+    ;;
+hash)
+    fzf-hash "${@:2}"
+    ;;
+log)
+    git_log "${@:2}"
+    ;;
+remote)
+    fzf-remote "${@:2}"
+    ;;
+stash)
+    fzf-stash "${@:2}"
+    ;;
+tag)
+    fzf-tag "${@:2}"
+    ;;
+esac

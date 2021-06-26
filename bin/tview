@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [[ -t 1 ]]; then
+    "$@"
+elif [[ $TMUX ]]; then
+    args=()
+    for i in $TVIEW_ENV_VARS; do
+        args+=(-e "${i}=${!i}")
+    done
+
+    tmux new-window "${args[@]}" \
+        "trap 'tmux wait-for -S tview-$$' EXIT INT TERM; $(printf "%q " "$@")" \
+        \; wait-for "tview-$$"
+fi

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -o pipefail
+
+# shellcheck source=./_fzf-state
+. "${0%/*}/_fzf-state"
+
+CMD="$1"
+shift
+
+case "$CMD" in
+list)
+    if [[ ${S[all]} == true ]]; then
+        ps aux
+    else
+        ps ux
+    fi
+    ;;
+run)
+    fzf_args=()
+    while ((${#@} > 0)); do
+        if [[ $1 == "--" ]]; then
+            shift
+            break
+        fi
+        fzf_args+=("$1")
+        shift
+    done
+
+    "$0" list |
+        fzf -m --header-lines=1 \
+            --header ":: C-r: reload; C-d: toggle all" \
+            --bind "ctrl-r:reload('$0' list)" \
+            --bind "ctrl-d:reload('$0' toggle-all && '$0' list)" \
+            "${fzf_args[@]}" |
+        awk '{print $2}'
+    ;;
+toggle-all)
+    if [[ ${S[all]} == true ]]; then
+        S[all]="false"
+    else
+        S[all]="true"
+    fi
+    ;;
+*)
+    exit 1
+    ;;
+esac

@@ -1,0 +1,72 @@
+#!/bin/bash
+
+set -o pipefail
+
+# shellcheck source=./_fzf-state
+. "${0%/*}/_fzf-state"
+
+containers() {
+    local args=()
+
+    case "$1" in
+    list)
+        if [[ ${S[all]} == true ]]; then
+            args+=(-a)
+        fi
+
+        docker ps "${args[@]}" "${@:2}" | less -KMRc
+        ;;
+    toggle-all)
+        if [[ ${S[all]} == true ]]; then
+            S[all]="false"
+        else
+            S[all]="true"
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+}
+
+fzf-container() {
+    containers list |
+        fzf --ansi --multi --header-lines=1 \
+            --bind "ctrl-r:reload('$0' containers toggle-all && '$0' containers list)" \
+            "$@" |
+        awk '{print $NF}'
+}
+
+fzf-image() {
+    docker images |
+        fzf --ansi --multi --header-lines=1 \
+            --bind "ctrl-r:reload(docker images)" \
+            "$@" |
+        awk '{print ($2 == "<none>") ? $3 : $1":"$2}'
+}
+
+fzf-volume() {
+    docker volume ls |
+        fzf --ansi --multi --header-lines=1 \
+            --bind "ctrl-r:reload(docker volume ls)" \
+            "$@" |
+        awk '{print $2}'
+}
+
+CMD="$1"
+shift
+
+case "$CMD" in
+container)
+    fzf-container "$@"
+    ;;
+containers)
+    containers "$@"
+    ;;
+image)
+    fzf-image "$@"
+    ;;
+volume)
+    fzf-volume "$@"
+    ;;
+esac

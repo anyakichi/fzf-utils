@@ -1,0 +1,131 @@
+#!/bin/bash
+
+set -o pipefail
+
+# shellcheck source=./_fzf-state
+. "${0%/*}/_fzf-state"
+
+issue() {
+    case "$1" in
+    run)
+        local view
+        view="'$0' issue view \$(cut -d ' ' -f1 <<< {})"
+
+        S[page]=1
+
+        $0 issue list |
+            fzf --ansi --multi --preview-window right:70% \
+                --header ":: C-r: toggle all; C-d: next page; C-s: prev page" \
+                --bind "ctrl-d:reload:'$0' issue next-page && '$0' issue list" \
+                --bind "ctrl-s:reload:'$0' issue prev-page && '$0' issue list" \
+                --bind "ctrl-r:reload:'$0' issue toggle-all && '$0' issue list" \
+                --bind "ctrl-t:execute:tview $view" \
+                --preview "$view | head -n 500" \
+                "${@:2}" |
+            sed -E 's/^#([0-9]+).*$/\1/'
+        ;;
+    list)
+        args=()
+
+        if [[ ${S[all]} == true ]]; then
+            args+=(-A)
+        fi
+
+        if [[ ${S[page]} ]]; then
+            args+=(-p "${S[page]}")
+        fi
+
+        glab issue list -P 100 "${args[@]}" | sed -e 1d -e '/^$/d'
+        ;;
+    view)
+        export PAGER=less
+        export LESS=-KMRc
+        glab issue view -c -P 100 "${@:2}"
+        ;;
+    next-page)
+        S[page]=$((S[page] + 1))
+        ;;
+    prev-page)
+        if ((S[page] > 1)); then
+            S[page]=$((S[page] - 1))
+        fi
+        ;;
+    toggle-all)
+        if [[ ${S[all]} == true ]]; then
+            S[all]="false"
+        else
+            S[all]="true"
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+}
+
+mr() {
+    case "$1" in
+    run)
+        local view
+        view="'$0' mr view \$(sed -E 's/^!([0-9]+).*$/\1/' <<< {})"
+
+        S[page]=1
+
+        $0 mr list |
+            fzf --ansi --multi --preview-window right:70% \
+                --header ":: C-r: toggle all; C-d: next page; C-s: prev page" \
+                --bind "ctrl-d:reload:'$0' mr next-page && '$0' mr list" \
+                --bind "ctrl-s:reload:'$0' mr prev-page && '$0' mr list" \
+                --bind "ctrl-r:reload:'$0' mr toggle-all && '$0' mr list" \
+                --bind "ctrl-t:execute:tview $view" \
+                --preview "$view | head -n 500" \
+                "${@:2}" |
+            sed -E 's/^!([0-9]+).*$/\1/'
+        ;;
+    list)
+        args=()
+
+        if [[ ${S[all]} == true ]]; then
+            args+=(-A)
+        fi
+
+        if [[ ${S[page]} ]]; then
+            args+=(-p "${S[page]}")
+        fi
+
+        glab mr list -P 100 "${args[@]}" | sed -e 1d -e '/^$/d'
+        ;;
+    view)
+        export PAGER=less
+        export LESS=-KMRc
+        glab mr view -c -P 100 "${@:2}"
+        ;;
+    next-page)
+        S[page]=$((S[page] + 1))
+        ;;
+    prev-page)
+        if ((S[page] > 1)); then
+            S[page]=$((S[page] - 1))
+        fi
+        ;;
+    toggle-all)
+        if [[ ${S[all]} == true ]]; then
+            S[all]="false"
+        else
+            S[all]="true"
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+}
+
+case "$1" in
+issue)
+    issue "${@:2}"
+    ;;
+mr)
+    mr "${@:2}"
+    ;;
+esac

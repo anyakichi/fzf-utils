@@ -1,0 +1,36 @@
+#!/bin/bash
+
+declare -A S
+
+load_state() {
+    if [[ -e $FZF_STATE ]]; then
+        while IFS=$'\n' read -r line; do
+            S[${line%%=*}]=${line#*=}
+        done <"$FZF_STATE"
+    fi
+}
+
+save_state() {
+    if [[ -e $FZF_STATE ]]; then
+        echo -n >"$FZF_STATE"
+        for key in "${!S[@]}"; do
+            echo "${key}=${S[$key]}" >>"$FZF_STATE"
+        done
+    fi
+}
+
+fzf() {
+    save_state
+    command fzf "$@"
+}
+
+if [[ $FZF_STATE ]]; then
+    load_state
+    trap 'save_state' 0
+else
+    FZF_STATE=$(mktemp)
+    export FZF_STATE
+
+    # shellcheck disable=SC2064
+    trap "rm -f '$FZF_STATE'" 0
+fi
