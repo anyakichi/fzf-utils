@@ -1,18 +1,18 @@
 # shellcheck shell=bash
 
-_fzf-docker-container() {
+fzf-utils::_docker-container() {
     fzf-docker container "$@"
 }
 
-_fzf-docker-image() {
+fzf-utils::_docker-image() {
     fzf-docker image "$@"
 }
 
-_fzf-docker-volume() {
+fzf-utils::_docker-volume() {
     fzf-docker volume "$@"
 }
 
-_fzf-file()
+fzf-utils::_file()
 {
     setopt localoptions pipefail
     local base dir raw_dir
@@ -50,7 +50,7 @@ _fzf-file()
     )
 }
 
-_fzf-history()
+fzf-utils::_history()
 {
     setopt localoptions pipefail
 
@@ -64,43 +64,43 @@ _fzf-history()
             --bind 'ctrl-r:down'
 }
 
-_fzf-git-branch() {
+fzf-utils::_git-branch() {
     fzf-git branch "$@"
 }
 
-_fzf-git-file() {
+fzf-utils::_git-file() {
     fzf-git file "$@"
 }
 
-_fzf-git-hash() {
+fzf-utils::_git-hash() {
     fzf-git hash "$@"
 }
 
-_fzf-git-remote() {
+fzf-utils::_git-remote() {
     fzf-git remote "$@"
 }
 
-_fzf-git-stash() {
+fzf-utils::_git-stash() {
     fzf-git stash "$@"
 }
 
-_fzf-git-tag() {
+fzf-utils::_git-tag() {
     fzf-git tag "$@"
 }
 
-_fzf-glab-issue() {
+fzf-utils::_glab-issue() {
     fzf-glab issue run
 }
 
-_fzf-glab-mr() {
+fzf-utils::_glab-mr() {
     fzf-glab mr run
 }
 
-_fzf-ps() {
+fzf-utils::_ps() {
     fzf-ps run
 }
 
-_fzf-rg() {
+fzf-utils::_rg() {
     local rg view
     view="bat --plain --color=always --pager='less -KMRc' \
             \$(cut -d ':' -f1 <<< {})"
@@ -114,15 +114,15 @@ _fzf-rg() {
         command cut -d ':' -f1
 }
 
-fzf-tmux-pane-widget() {
+fzf-utils::tmux-pane-widget() {
     local result
     result=$(fzf-tmux-pane run --border)
     zle reset-prompt
     tmux switch-client -t "${result}"
 }
-zle -N fzf-tmux-pane-widget
+zle -N fzf-utils::tmux-pane-widget
 
-fzf-file-widget()
+fzf-utils::file-widget()
 {
     setopt localoptions extended_glob pipefail
     local args key res ret
@@ -134,9 +134,9 @@ fzf-file-widget()
         fi
 
         if [[ ${args[1]} == cd ]]; then
-            res=("${(@f)"$(_fzf-file "${args[-1]}" d)"}")
+            res=("${(@f)"$(fzf-utils::_file "${args[-1]}" d)"}")
         else
-            res=("${(@f)"$(_fzf-file "${args[-1]}")"}")
+            res=("${(@f)"$(fzf-utils::_file "${args[-1]}")"}")
         fi
         ret=$?
 
@@ -165,14 +165,14 @@ fzf-file-widget()
 
     return ${ret}
 }
-zle -N fzf-file-widget
+zle -N fzf-utils::file-widget
 
-fzf-history-widget()
+fzf-utils::history-widget()
 {
     setopt localoptions pipefail
     local key res ret
 
-    res=("${(@f)"$(_fzf-history "${LBUFFER}")"}")
+    res=("${(@f)"$(fzf-utils::_history "${LBUFFER}")"}")
     ret=$?
 
     if [[ ${#res} -ge 3 && ${res[2]} != "ctrl-q" ]]; then
@@ -193,73 +193,73 @@ fzf-history-widget()
 
     return ${ret}
 }
-zle -N fzf-history-widget
+zle -N fzf-utils::history-widget
 
-_fzf-join-lines() {
+fzf-utils::join-lines() {
     local item
     while read -r item; do
         printf '%q ' "$item"
     done
 }
 
-create-widget() {
+fzf-utils::create-widget() {
     local x
     for x in "$@"; do
-        eval "$x-widget() { local result=\$(_$x | _fzf-join-lines); zle reset-prompt; LBUFFER+=\$result }"
-        eval "zle -N $x-widget"
+        eval "fzf-utils::$x-widget() { local result=\$(fzf-utils::_$x | fzf-utils::join-lines); zle reset-prompt; LBUFFER+=\$result }"
+        eval "zle -N fzf-utils::$x-widget"
     done
 }
-create-widget \
-    fzf-docker-container \
-    fzf-docker-image \
-    fzf-docker-volume \
-    fzf-git-branch \
-    fzf-git-file \
-    fzf-git-hash \
-    fzf-git-remote \
-    fzf-git-stash \
-    fzf-git-tag \
-    fzf-glab-issue \
-    fzf-glab-mr \
-    fzf-ps \
-    fzf-rg
-unset -f create-widget
+fzf-utils::create-widget \
+    docker-container \
+    docker-image \
+    docker-volume \
+    git-branch \
+    git-file \
+    git-hash \
+    git-remote \
+    git-stash \
+    git-tag \
+    glab-issue \
+    glab-mr \
+    ps \
+    rg
+unset -f fzf-utils::create-widget
 
 if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
-    bindkey '^g^b' fzf-git-branch-widget
-    bindkey '^gb' fzf-git-branch-widget
+    bindkey '^g^b' fzf-utils::git-branch-widget
+    bindkey '^gb' fzf-utils::git-branch-widget
 
-    bindkey '^g^c' fzf-docker-container-widget
-    bindkey '^gc' fzf-docker-container-widget
+    bindkey '^g^c' fzf-utils::docker-container-widget
+    bindkey '^gc' fzf-utils::docker-container-widget
 
-    bindkey '^g^f' fzf-git-file-widget
-    bindkey '^gf' fzf-git-file-widget
+    bindkey '^g^f' fzf-utils::git-file-widget
+    bindkey '^gf' fzf-utils::git-file-widget
 
-    bindkey '^g^g' fzf-rg-widget
-    bindkey '^gg' fzf-rg-widget
+    bindkey '^g^g' fzf-utils::rg-widget
+    bindkey '^gg' fzf-utils::rg-widget
 
-    bindkey '^g^h' fzf-git-hash-widget
-    bindkey '^gh' fzf-git-hash-widget
+    bindkey '^g^h' fzf-utils::git-hash-widget
+    bindkey '^gh' fzf-utils::git-hash-widget
 
-    bindkey '^g^i' fzf-docker-image-widget
-    bindkey '^gi' fzf-docker-image-widget
+    bindkey '^g^i' fzf-utils::docker-image-widget
+    bindkey '^gi' fzf-utils::docker-image-widget
 
-    bindkey '^g^p' fzf-ps-widget
-    bindkey '^gp' fzf-ps-widget
+    bindkey '^g^p' fzf-utils::ps-widget
+    bindkey '^gp' fzf-utils::ps-widget
 
-    bindkey '^g^r' fzf-git-remote-widget
-    bindkey '^gr' fzf-git-remote-widget
+    bindkey '^g^r' fzf-utils::git-remote-widget
+    bindkey '^gr' fzf-utils::git-remote-widget
 
-    bindkey '^g^s' fzf-git-stash-widget
-    bindkey '^gs' fzf-git-stash-widget
+    bindkey '^g^s' fzf-utils::git-stash-widget
+    bindkey '^gs' fzf-utils::git-stash-widget
 
-    bindkey '^g^t' fzf-git-tag-widget
-    bindkey '^gt' fzf-git-tag-widget
+    bindkey '^g^t' fzf-utils::git-tag-widget
+    bindkey '^gt' fzf-utils::git-tag-widget
 
-    bindkey '^g^v' fzf-docker-volume-widget
-    bindkey '^gv' fzf-docker-volume-widget
+    bindkey '^g^v' fzf-utils::docker-volume-widget
+    bindkey '^gv' fzf-utils::docker-volume-widget
 
-    bindkey '^s' fzf-tmux-pane-widget
+    bindkey '^s' fzf-utils::tmux-pane-widget
 fi
 
 PATH=$PATH:$(cd "$(dirname "$0")" && pwd)/bin
