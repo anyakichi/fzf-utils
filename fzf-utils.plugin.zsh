@@ -1,5 +1,12 @@
 # shellcheck shell=bash
 
+fzf-utils::_cdr()
+{
+    cdr -l | sed 's/^[[:digit:]]*[[:space:]]*//' \
+        | fzf --no-multi \
+            --bind 'ctrl-r:reload:zsh -c "source ~/.zsh/cdr.zsh; cdr -l | sed \"s/^[[:digit:]]*[[:space:]]*//\""'
+}
+
 fzf-utils::_docker-container() {
     fzf-docker container "$@"
 }
@@ -114,13 +121,33 @@ fzf-utils::_rg() {
         command cut -d ':' -f1
 }
 
-fzf-utils::tmux-pane-widget() {
-    local result
-    result=$(fzf-tmux-pane run --border)
-    zle reset-prompt
-    tmux switch-client -t "${result}"
+fzf-utils::cdr-widget()
+{
+    setopt localoptions pipefail
+    local dir
+
+    dir=$(fzf-utils::_cdr)
+    local ret=$?
+    if [ -n "${dir}" ]; then
+        BUFFER="cd ${dir}"
+        zle reset-prompt
+        zle accept-line
+    else
+        zle reset-prompt
+    fi
+    return $ret
 }
-zle -N fzf-utils::tmux-pane-widget
+zle -N fzf-utils::cdr-widget
+
+fzf-utils::cdr-or-file-widget()
+{
+    if [[ -n "${BUFFER}" ]]; then
+        fzf-utils::file-widget
+    else
+        fzf-utils::cdr-widget
+    fi
+}
+zle -N fzf-utils::cdr-or-file-widget
 
 fzf-utils::file-widget()
 {
@@ -194,6 +221,14 @@ fzf-utils::history-widget()
     return ${ret}
 }
 zle -N fzf-utils::history-widget
+
+fzf-utils::tmux-pane-widget() {
+    local result
+    result=$(fzf-tmux-pane run --border)
+    zle reset-prompt
+    tmux switch-client -t "${result}"
+}
+zle -N fzf-utils::tmux-pane-widget
 
 fzf-utils::join-lines() {
     local item
