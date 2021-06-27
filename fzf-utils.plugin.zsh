@@ -50,6 +50,20 @@ _fzf-file()
     )
 }
 
+_fzf-history()
+{
+    setopt localoptions pipefail
+
+    fc -rln 1 \
+        | fzf -q "$1" --no-multi -0 --print-query \
+            --expect=ctrl-o,ctrl-q,ctrl-y \
+            --tiebreak=index \
+            --preview "echo {}" \
+            --preview-window bottom:3:wrap:hidden \
+            --bind 'ctrl-s:toggle-sort' \
+            --bind 'ctrl-r:down'
+}
+
 _fzf-git-branch() {
     fzf-git branch "$@"
 }
@@ -152,6 +166,34 @@ fzf-file-widget()
     return ${ret}
 }
 zle -N fzf-file-widget
+
+fzf-history-widget()
+{
+    setopt localoptions pipefail
+    local key res ret
+
+    res=("${(@f)"$(_fzf-history "${LBUFFER}")"}")
+    ret=$?
+
+    if [[ ${#res} -ge 3 && ${res[2]} != "ctrl-q" ]]; then
+        key="${res[2]}"
+        BUFFER="${res[3]}"
+        CURSOR=$#BUFFER
+    elif [[ ${#res} -ge 2 ]]; then
+        key="${res[2]}"
+        BUFFER="${res[1]}"
+        CURSOR=$#BUFFER
+    fi
+
+    zle reset-prompt
+
+    if [[ -z "${key}" ]]; then
+        zle accept-line
+    fi
+
+    return ${ret}
+}
+zle -N fzf-history-widget
 
 _fzf-join-lines() {
     local item
