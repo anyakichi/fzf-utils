@@ -12,6 +12,44 @@ _fzf-docker-volume() {
     fzf-docker volume "$@"
 }
 
+_fzf-file()
+{
+    setopt localoptions pipefail
+    local base dir raw_dir
+
+    eval "dir=$1"
+    if [[ -d "$dir" ]]; then
+        base=
+        raw_dir="$1"
+    else
+        base=$(basename "$dir")
+        dir=$(dirname "$dir")
+        raw_dir=${1%"${(q)base}"}
+    fi
+
+    if [[ -n "$raw_dir" ]]; then
+        raw_dir="${raw_dir%%/##}/"
+    fi
+
+    shift
+
+    (
+        local count=0
+
+        cd "${dir:-.}" &&
+        fzf-file run -0 --print-query --expect=ctrl-l,ctrl-o,ctrl-q \
+            -q "$base" --prompt "${(Q)raw_dir}> " -- "$@" \
+            | while read -r line; do
+                if (( count < 2 )); then
+                    echo "$line"
+                else
+                    echo "${raw_dir}${(q)line}"
+                fi
+                (( count++ ))
+            done
+    )
+}
+
 _fzf-git-branch() {
     fzf-git branch "$@"
 }
@@ -69,6 +107,51 @@ fzf-tmux-pane-widget() {
     tmux switch-client -t "${result}"
 }
 zle -N fzf-tmux-pane-widget
+
+fzf-file-widget()
+{
+    setopt localoptions extended_glob pipefail
+    local args key res ret
+
+    while true; do
+        args=("${(z)LBUFFER}")
+        if [[ ${LBUFFER} =~ [^\\][[:space:]]$ ]]; then
+            args+=("")
+        fi
+
+        if [[ ${args[1]} == cd ]]; then
+            res=("${(@f)"$(_fzf-file "${args[-1]}" d)"}")
+        else
+            res=("${(@f)"$(_fzf-file "${args[-1]}")"}")
+        fi
+        ret=$?
+
+        if [[ ${#res} -ge 3 && ${res[2]} != "ctrl-q" ]]; then
+            key="${res[2]}"
+            shift 2 res
+
+            [[ ${args[-1]} ]] && LBUFFER="${LBUFFER%%${args[-1]}**}"
+            LBUFFER+="${res[*]} "
+        elif [[ ${#res} -ge 2 ]]; then
+            [[ ${args[-1]} ]] && LBUFFER="${LBUFFER%%${args[-1]}**}"
+            LBUFFER+=${res[1]}
+        fi
+
+        zle reset-prompt
+
+        if [[ "${key}" == "ctrl-l" ]]; then
+            LBUFFER="${LBUFFER%%?}"
+            key=
+            continue
+        elif [[ "${key}" == "ctrl-o" ]]; then
+            zle accept-line
+        fi
+        break
+    done
+
+    return ${ret}
+}
+zle -N fzf-file-widget
 
 _fzf-join-lines() {
     local item
