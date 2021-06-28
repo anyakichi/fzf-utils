@@ -294,6 +294,8 @@ if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
     bindkey '^g^v' fzf-utils::docker-volume-widget
     bindkey '^gv' fzf-utils::docker-volume-widget
 
+    bindkey '^_' fzf-utils::cdr-or-file-widget
+    bindkey '^r' fzf-utils::history-widget
     bindkey '^s' fzf-utils::tmux-pane-widget
 fi
 
