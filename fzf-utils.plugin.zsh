@@ -214,7 +214,7 @@ fzf-utils::history-widget()
 
     zle reset-prompt
 
-    if [[ -z "${key}" ]]; then
+    if [[ $ret == 0 && -z "${key}" ]]; then
         zle accept-line
     fi
 
