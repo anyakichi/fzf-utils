@@ -56,7 +56,7 @@ git_files() {
         if [[ ${files["$line"]} != 1 ]]; then
             echo " H $line"
         fi
-    done < <(git ls-files)
+    done < <(git ls-files "$(git rev-parse --show-toplevel)")
 }
 
 git_log() {
