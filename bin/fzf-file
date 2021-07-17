@@ -5,43 +5,62 @@ set -o pipefail
 # shellcheck source=./_fzf-state
 . "${0%/*}/_fzf-state"
 
+HEADER=":: C-d: change directory; C-s: up directory; C-r: cycle restricted; C-x: cycle type; C-v: toggle depth"
+
 do_find() {
-    local opts
+    local header_pre opts
+    header_pre=""
     opts=()
 
     if [[ $1 == "d" ]]; then
         opts+=(-type d -printf "%p/\n")
+        header_pre+="-t d "
     elif [[ $1 == "f" ]]; then
         opts+=(-type f -print -o -type l -print)
+        header_pre+="-t f "
     else
         opts+=(-type d -printf "%p/\n" -o -type f -print -o -type l -print)
     fi
 
     if (($2 > 0)); then
         opts+=(-maxdepth "$2")
+        header_pre+="-d $2 "
     fi
 
+    echo "$header_pre$HEADER"
     find -L "${3:-.}" -mindepth 1 -xdev -path '*/\.*' -prune -o "${opts[@]}" 2>/dev/null |
         cut -b3-
 }
 
 do_fd() {
-    local opts
+    local header_pre opts
+    header_pre=""
     opts=()
 
     if [[ $1 == "d" ]]; then
         opts+=(--type d)
+        header_pre+="-t d "
     elif [[ $1 == "f" ]]; then
         opts+=(--type f --type l)
+        header_pre+="-t f "
     fi
 
     if (($2 > 0)); then
         opts+=(-d "$2")
+        header_pre+="-d $2 "
     fi
 
-    fd -L --one-file-system --color=always "${opts[@]}" "${S[ignore]}" \
+    if [[ -n ${S[restricted]} ]]; then
+        opts+=("${S[restricted]}")
+        header_pre+="${S[restricted]} "
+    fi
+
+    echo "$header_pre$HEADER"
+    fd -L --one-file-system --color=always "${opts[@]}" \
         --search-path "${3:-.}" 2>/dev/null
 }
+
+export TVIEW_ENV_VARS="FZF_DEFAULT_OPTS FZF_STATE"
 
 CMD="$1"
 shift
@@ -92,24 +111,24 @@ run)
 
     "$0" list |
         fzf --ansi -m \
-            --header ":: C-r: toggle depth; C-d: go parent; C-s: reset parent; C-x: cycle type; C-v: cycle ignore" \
-            --bind "ctrl-d:reload('$0' go-parent && '$0' list)" \
-            --bind "ctrl-r:reload('$0' toggle-depth && '$0' list)" \
-            --bind "ctrl-s:reload('$0' reset-parent && '$0' list)" \
+            --header-lines 1 \
+            --bind "ctrl-d:reload('$0' change-directory && '$0' list)" \
+            --bind "ctrl-r:reload('$0' cycle-restricted && '$0' list)" \
+            --bind "ctrl-s:reload('$0' up-directory && '$0' list)" \
             --bind "ctrl-t:execute(tview '$0' view {})" \
-            --bind "ctrl-v:reload('$0' cycle-ignore && '$0' list)" \
+            --bind "ctrl-v:reload('$0' toggle-depth && '$0' list)" \
             --bind "ctrl-x:reload('$0' cycle-type && '$0' list)" \
             --preview "'$0' view {} | head -500" \
             --preview-window hidden \
             "${fzf_args[@]}"
     ;;
-cycle-ignore)
-    if [[ ${S[ignore]} == "" ]]; then
-        S[ignore]=-u
-    elif [[ ${S[ignore]} == "-u" ]]; then
-        S[ignore]=-uu
+cycle-restricted)
+    if [[ ${S[restricted]} == "" ]]; then
+        S[restricted]=-u
+    elif [[ ${S[restricted]} == "-u" ]]; then
+        S[restricted]=-uu
     else
-        S[ignore]=
+        S[restricted]=
     fi
     ;;
 cycle-type)
@@ -128,14 +147,20 @@ toggle-depth)
         S[depth]=1
     fi
     ;;
-go-parent)
+change-directory)
+    exec tview "$0" _change-directory
+    ;;
+_change-directory)
+    res=$("$0" run +m --bind ctrl-q:print-query --bind ctrl-d:ignore --no-height --query "${S[path]}" -- d)
+    if [[ $? == [01] ]]; then
+        S[path]="$res"
+    fi
+    ;;
+up-directory)
     if [[ ${S[path]} ]]; then
         S[path]+="/.."
     else
         S[path]=".."
     fi
-    ;;
-reset-parent)
-    S[path]=""
     ;;
 esac

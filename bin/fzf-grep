@@ -1,0 +1,84 @@
+#!/bin/bash
+
+set -o pipefail
+
+# shellcheck source=./_fzf-state
+. "${0%/*}/_fzf-state"
+
+export TVIEW_ENV_VARS="FZF_DEFAULT_OPTS FZF_STATE"
+
+CMD="$1"
+shift
+
+case "$CMD" in
+list)
+    HEADER=":: C-d: change directory; C-s: up directory; C-r: cycle restricted"
+    header_pre=""
+
+    [[ ${#@} == 0 || -z ${@: -1} ]] && exit 0
+
+    args=("$@")
+    if [[ -n ${S[path]} ]]; then
+        args+=("${S[path]}")
+    fi
+
+    if command -v rg >/dev/null 2>&1; then
+        if [[ -n ${S[restricted]} ]]; then
+            args+=("${S[restricted]}")
+            header_pre+="${S[restricted]} "
+        fi
+
+        echo "$header_pre$HEADER"
+        rg --one-file-system --line-number --no-heading --color=always --smart-case "${args[@]}"
+    else
+        echo "$header_pre$HEADER"
+        grep -rin --color=always "${args[@]}"
+    fi
+    exit 0
+    ;;
+view)
+    export LESS=-KMRc
+
+    if command -v bat &>/dev/null; then
+        bat --plain --color=always --paging=always "$1" --highlight-line "$2"
+    else
+        less "$1"
+    fi
+    ;;
+run)
+    fzf_args=()
+    while ((${#@} > 0)); do
+        if [[ $1 == "--" ]]; then
+            shift
+            break
+        fi
+        fzf_args+=("$1")
+        shift
+    done
+
+    "$0" list "$@" |
+        fzf -m --ansi --disabled \
+            --header-lines 1 \
+            --delimiter : \
+            --bind "change:reload:sleep 0.1; "$0" list {q}" \
+            --bind "ctrl-d:reload:fzf-file change-directory && '$0' list {q}" \
+            --bind "ctrl-r:reload:'$0' cycle-restricted && '$0' list {q}" \
+            --bind "ctrl-s:reload:fzf-file up-directory && '$0' list {q}" \
+            --bind "ctrl-t:execute:tview '$0' view {1} {2}" \
+            --preview "'$0' view {1} {2}" \
+            --preview-window hidden,+{2}+3/3 \
+            "${fzf_args[@]}" |
+        command cut -d ':' -f1
+    ;;
+cycle-restricted)
+    if [[ ${S[restricted]} == "" ]]; then
+        S[restricted]=-u
+    elif [[ ${S[restricted]} == "-u" ]]; then
+        S[restricted]=-uu
+    elif [[ ${S[restricted]} == "-uu" ]]; then
+        S[restricted]=-uuu
+    else
+        S[restricted]=
+    fi
+    ;;
+esac

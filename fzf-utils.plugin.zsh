@@ -108,17 +108,7 @@ fzf-utils::_ps() {
 }
 
 fzf-utils::_rg() {
-    local rg view
-    view="bat --plain --color=always --pager='less -KMRc' \
-            \$(cut -d ':' -f1 <<< {})"
-    rg="rg --column --line-number --no-heading --color=always --smart-case "
-
-    fzf -m --ansi --disabled \
-        --bind "change:reload:$rg {q} || true" \
-        --bind "ctrl-t:execute:tview $view" \
-        --preview "$view | head -500" \
-        --preview-window hidden |
-        command cut -d ':' -f1
+    fzf-grep run "$@"
 }
 
 fzf-utils::cdr-widget()
