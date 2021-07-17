@@ -61,8 +61,8 @@ fzf-utils::_history()
 {
     setopt localoptions pipefail
 
-    fc -rln 1 \
-        | fzf -q "$1" --no-multi -0 --print-query \
+    fc -rl 1 \
+        | fzf -q "$1" --with-nth 2.. --no-multi -0 --print-query \
             --expect=ctrl-o,ctrl-q,ctrl-y \
             --tiebreak=index \
             --preview "echo {}" \
@@ -204,8 +204,7 @@ fzf-utils::history-widget()
 
     if [[ ${#res} -ge 3 && ${res[2]} != "ctrl-q" ]]; then
         key="${res[2]}"
-        BUFFER="${res[3]}"
-        CURSOR=$#BUFFER
+        zle vi-fetch-history -n "${res[3]}"
     elif [[ ${#res} -ge 2 ]]; then
         key="${res[2]}"
         BUFFER="${res[1]}"
@@ -214,7 +213,7 @@ fzf-utils::history-widget()
 
     zle reset-prompt
 
-    if [[ $ret == 0 && -z "${key}" ]]; then
+    if [[ $ret == [01] && -z "${key}" ]]; then
         zle accept-line
     fi
 
