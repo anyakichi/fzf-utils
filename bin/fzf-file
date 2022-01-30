@@ -50,14 +50,19 @@ do_fd() {
         header_pre+="-d $2 "
     fi
 
+    if [[ -n $3 ]]; then
+        opts+=(--search-path "$3")
+    else
+        opts+=(--strip-cwd-prefix)
+    fi
+
     if [[ -n ${S[restricted]} ]]; then
         opts+=("${S[restricted]}")
         header_pre+="${S[restricted]} "
     fi
 
     echo "$header_pre$HEADER"
-    fd -L --one-file-system --color=always "${opts[@]}" \
-        --search-path "${3:-.}" 2>/dev/null
+    fd -L --one-file-system --color=always "${opts[@]}" 2>/dev/null
 }
 
 export TVIEW_ENV_VARS="FZF_DEFAULT_OPTS FZF_STATE"
