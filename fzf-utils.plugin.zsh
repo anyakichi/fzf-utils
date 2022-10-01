@@ -1,9 +1,8 @@
 # shellcheck shell=bash
 
-fzf-utils::_cdr()
-{
-    cdr -l | sed 's/^[[:digit:]]*[[:space:]]*//' \
-        | fzf --no-multi \
+fzf-utils::_cdr() {
+    cdr -l | sed 's/^[[:digit:]]*[[:space:]]*//' |
+        fzf --no-multi \
             --bind 'ctrl-r:reload:zsh -c "source ~/.zsh/cdr.zsh; cdr -l | sed \"s/^[[:digit:]]*[[:space:]]*//\""'
 }
 
@@ -19,8 +18,7 @@ fzf-utils::_docker-volume() {
     fzf-docker volume "$@"
 }
 
-fzf-utils::_file()
-{
+fzf-utils::_file() {
     setopt localoptions pipefail
     local base dir raw_dir
 
@@ -57,12 +55,11 @@ fzf-utils::_file()
     )
 }
 
-fzf-utils::_history()
-{
+fzf-utils::_history() {
     setopt localoptions pipefail
 
-    fc -rl 1 \
-        | fzf -q "$1" --with-nth 2.. --no-multi -0 --print-query \
+    fc -rl 1 |
+        fzf -q "$1" --with-nth 2.. --no-multi -0 --print-query \
             --expect=ctrl-o,ctrl-q,ctrl-y \
             --tiebreak=index \
             --preview "echo {}" \
@@ -111,8 +108,7 @@ fzf-utils::_rg() {
     fzf-grep run "$@"
 }
 
-fzf-utils::cdr-widget()
-{
+fzf-utils::cdr-widget() {
     setopt localoptions pipefail
     local dir
 
@@ -129,8 +125,7 @@ fzf-utils::cdr-widget()
 }
 zle -N fzf-utils::cdr-widget
 
-fzf-utils::cdr-or-file-widget()
-{
+fzf-utils::cdr-or-file-widget() {
     if [[ -n "${BUFFER}" ]]; then
         fzf-utils::file-widget
     else
@@ -139,8 +134,7 @@ fzf-utils::cdr-or-file-widget()
 }
 zle -N fzf-utils::cdr-or-file-widget
 
-fzf-utils::file-widget()
-{
+fzf-utils::file-widget() {
     setopt localoptions extended_glob pipefail
     local args key res ret
 
@@ -184,8 +178,7 @@ fzf-utils::file-widget()
 }
 zle -N fzf-utils::file-widget
 
-fzf-utils::history-widget()
-{
+fzf-utils::history-widget() {
     setopt localoptions pipefail
     local key res ret
 
