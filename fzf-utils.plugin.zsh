@@ -155,10 +155,10 @@ fzf-utils::file-widget() {
             key="${res[2]}"
             shift 2 res
 
-            [[ ${args[-1]} ]] && LBUFFER="${LBUFFER%%${args[-1]}**}"
-            LBUFFER+="${res[*]} "
+            [[ ${args[-1]} ]] && LBUFFER="${LBUFFER%%${args[-1]}}"
+            LBUFFER+="${res[*]}"
         elif [[ ${#res} -ge 2 ]]; then
-            [[ ${args[-1]} ]] && LBUFFER="${LBUFFER%%${args[-1]}**}"
+            [[ ${args[-1]} ]] && LBUFFER="${LBUFFER%%${args[-1]}}"
             LBUFFER+=${res[1]}
         fi
 
