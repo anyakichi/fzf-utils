@@ -109,10 +109,12 @@ run)
 
     S[type]=a
     S[depth]=0
+    S[restricted]=""
     if [[ ${#@} != 0 ]]; then
         [[ $1 ]] && S[type]=$1
         [[ $2 ]] && S[depth]=$2
     fi
+    [[ $(basename "$PWD") =~ ^\. ]] && S[restricted]="-uu"
 
     "$0" list |
         fzf --ansi -m \
