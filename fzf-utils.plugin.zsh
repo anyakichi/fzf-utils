@@ -61,7 +61,7 @@ fzf-utils::_history() {
     fc -rl 1 |
         fzf -q "$1" --with-nth 2.. --no-multi -0 --print-query \
             --expect=ctrl-o,ctrl-q,ctrl-y \
-            --tiebreak=index \
+            --scheme=history \
             --preview "echo {}" \
             --preview-window bottom:3:wrap:hidden \
             --bind 'ctrl-s:toggle-sort' \

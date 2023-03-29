@@ -117,7 +117,7 @@ run)
     [[ $(basename "$PWD") =~ ^\. ]] && S[restricted]="-uu"
 
     "$0" list |
-        fzf --ansi -m \
+        fzf --ansi -m --scheme path \
             --header-lines 1 \
             --bind "ctrl-d:reload('$0' change-directory && '$0' list)" \
             --bind "ctrl-r:reload('$0' cycle-restricted && '$0' list)" \
