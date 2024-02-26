@@ -5,7 +5,9 @@ if [[ -t 1 ]]; then
 elif [[ $TMUX ]]; then
     args=()
     for i in $TVIEW_ENV_VARS; do
-        args+=(-e "${i}=${!i}")
+        if [[ ${!i} ]]; then
+            args+=(-e "${i}=${!i}")
+        fi
     done
 
     tmux new-window "${args[@]}" \

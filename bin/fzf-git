@@ -194,7 +194,7 @@ fzf-tag() {
             --preview "$view | head -n 500"
 }
 
-export TVIEW_ENV_VARS="FZF_DEFAULT_OPTS FZF_STATE"
+export TVIEW_ENV_VARS="GIT_DIR FZF_DEFAULT_OPTS FZF_STATE"
 
 case "$1" in
 branch)
