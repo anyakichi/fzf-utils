@@ -196,6 +196,10 @@ fzf-tag() {
 
 export TVIEW_ENV_VARS="GIT_DIR FZF_DEFAULT_OPTS FZF_STATE"
 
+if [[ $FZF_GIT_DEFAULT_DIR ]] && ! git rev-parse --show-toplevel &>/dev/null; then
+    export GIT_DIR=$FZF_GIT_DEFAULT_DIR
+fi
+
 case "$1" in
 branch)
     fzf-branch "${@:2}"
