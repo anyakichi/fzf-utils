@@ -5,6 +5,9 @@ set -o pipefail
 # shellcheck source=./_fzf-state
 . "${0%/*}/_fzf-state"
 
+# shellcheck source=./_fzf-common
+. "${0%/*}/_fzf-common"
+
 containers() {
     local args=()
 
@@ -14,14 +17,11 @@ containers() {
             args+=(-a)
         fi
 
+        setup_pager
         docker ps "${args[@]}" "${@:2}" | less -KMRc
         ;;
     toggle-all)
-        if [[ ${S[all]} == true ]]; then
-            S[all]="false"
-        else
-            S[all]="true"
-        fi
+        toggle_boolean S[all]
         ;;
     *)
         exit 1

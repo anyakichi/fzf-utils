@@ -5,6 +5,9 @@ set -o pipefail
 # shellcheck source=./_fzf-state
 . "${0%/*}/_fzf-state"
 
+# shellcheck source=./_fzf-common
+. "${0%/*}/_fzf-common"
+
 FZF_GIT_OPTS="${FZF_GIT_OPTS:=--height 50%}"
 
 git_diff() {
@@ -13,12 +16,8 @@ git_diff() {
         local args=()
 
         if [[ ${S[mode]} == "file" ]]; then
-            export LESS=-KMRc
-            if command -v bat &>/dev/null; then
-                bat --plain --color=always --paging=always "${@:2}"
-            else
-                less "${@:2}"
-            fi
+            setup_pager
+            view_file "${@:2}"
         else
             if [[ ${S[mode]} == "cached" ]]; then
                 args+=(--cached)
@@ -30,13 +29,7 @@ git_diff() {
         fi
         ;;
     cycle-mode)
-        if [[ ${S[mode]} == "cached" ]]; then
-            S[mode]="file"
-        elif [[ ${S[mode]} == "file" ]]; then
-            S[mode]="diff"
-        else
-            S[mode]="cached"
-        fi
+        cycle_value S[mode] "cached" "file" "diff"
         ;;
     *)
         exit 1
@@ -103,11 +96,7 @@ git_log() {
         fi
         ;;
     toggle-graph)
-        if [[ ${S[graph]} == true ]]; then
-            S[graph]="false"
-        else
-            S[graph]="true"
-        fi
+        toggle_boolean S[graph]
         ;;
     *)
         exit 1
@@ -136,7 +125,7 @@ fzf-file() {
 
     "$0" files |
         fzf ${FZF_GIT_OPTS} -m --ansi --header-lines 1 --nth 2..,.. \
-            --header ":: C-r: cycle format" \
+            --header "$(fzf_header 'C-r: cycle format')" \
             --bind "ctrl-q:print-query" \
             --bind "ctrl-r:execute-silent('$0' diff cycle-mode)+refresh-preview" \
             --bind "ctrl-t:execute:tview $view" \
@@ -151,7 +140,7 @@ fzf-hash() {
 
     "$0" log view "$@" |
         fzf ${FZF_GIT_OPTS} --ansi --no-sort --reverse --multi --tiebreak=index \
-            --header ":: C-s: toggle sort; C-r: toggle graph; C-x: switch branch; C-d: limit files" \
+            --header "$(fzf_header 'C-s: toggle sort' 'C-r: toggle graph' 'C-x: switch branch' 'C-d: limit files')" \
             --bind 'ctrl-s:toggle-sort' \
             --bind "ctrl-d:execute-silent('$0' log files)+reload('$0' log view)" \
             --bind "ctrl-r:execute-silent('$0' log toggle-graph)+reload('$0' log view)" \

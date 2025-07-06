@@ -5,6 +5,9 @@ set -o pipefail
 # shellcheck source=./_fzf-state
 . "${0%/*}/_fzf-state"
 
+# shellcheck source=./_fzf-common
+. "${0%/*}/_fzf-common"
+
 export TVIEW_ENV_VARS="FZF_DEFAULT_OPTS FZF_STATE"
 
 CMD="$1"
@@ -37,9 +40,8 @@ list)
     exit 0
     ;;
 view)
-    export LESS=-KMRc
-
-    if command -v bat &>/dev/null; then
+    setup_pager
+    if has_command bat; then
         bat --plain --color=always --paging=always "$1" --highlight-line "$2"
     else
         less "$1"
@@ -47,14 +49,7 @@ view)
     ;;
 run)
     fzf_args=()
-    while ((${#@} > 0)); do
-        if [[ $1 == "--" ]]; then
-            shift
-            break
-        fi
-        fzf_args+=("$1")
-        shift
-    done
+    parse_fzf_args fzf_args "$@"
 
     "$0" list "$@" |
         fzf -m --ansi --disabled \
@@ -71,14 +66,6 @@ run)
         command cut -d ':' -f1
     ;;
 cycle-restricted)
-    if [[ ${S[restricted]} == "" ]]; then
-        S[restricted]=-u
-    elif [[ ${S[restricted]} == "-u" ]]; then
-        S[restricted]=-uu
-    elif [[ ${S[restricted]} == "-uu" ]]; then
-        S[restricted]=-uuu
-    else
-        S[restricted]=
-    fi
+    cycle_value S[restricted] "" "-u" "-uu" "-uuu"
     ;;
 esac

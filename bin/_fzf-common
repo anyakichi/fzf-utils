@@ -1,0 +1,162 @@
+# Common utilities for fzf-utils commands
+
+# Parse fzf arguments from command line
+# Usage: parse_fzf_args fzf_args "$@"
+# Separates fzf arguments from command arguments using -- delimiter
+parse_fzf_args() {
+    local -n _args=$1
+    shift
+    while ((${#@} > 0)); do
+        if [[ $1 == "--" ]]; then
+            shift
+            break
+        fi
+        _args+=("$1")
+        shift
+    done
+}
+
+# Toggle boolean state value
+# Usage: toggle_boolean S[all]
+toggle_boolean() {
+    local -n var=$1
+    if [[ $var == true ]]; then
+        var="false"
+    else
+        var="true"
+    fi
+}
+
+# Setup pager environment
+setup_pager() {
+    export PAGER=less
+    export LESS=-KMRc
+}
+
+# View file with bat or less fallback
+# Usage: view_file filename
+view_file() {
+    local file=$1
+    if command -v bat &>/dev/null; then
+        bat --plain --color=always --paging=always "$file"
+    else
+        less "$file"
+    fi
+}
+
+# Preview file with syntax highlighting
+# Usage: preview_file filename [max_lines]
+preview_file() {
+    local file=$1
+    local max_lines=${2:-500}
+
+    if command -v bat &>/dev/null; then
+        bat --style=plain --color=always "$file" | head -n "$max_lines"
+    else
+        head -n "$max_lines" "$file"
+    fi
+}
+
+# Preview directory listing
+# Usage: preview_directory dirname
+preview_directory() {
+    local dir=$1
+    if command -v exa &>/dev/null; then
+        exa -laF --color=always "$dir"
+    else
+        ls -la "$dir"
+    fi
+}
+
+# Increment page number
+# Usage: next_page S[page]
+next_page() {
+    local -n _page_ref=$1
+    _page_ref=$((_page_ref + 1))
+}
+
+# Decrement page number (min 1)
+# Usage: prev_page S[page]
+prev_page() {
+    local -n _page_ref=$1
+    if ((_page_ref > 1)); then
+        _page_ref=$((_page_ref - 1))
+    fi
+}
+
+# Cycle through values
+# Usage: cycle_value S[mode] "value1" "value2" "value3"
+cycle_value() {
+    local -n var=$1
+    shift
+    local values=("$@")
+    local current_index=-1
+
+    # Find current value index
+    for i in "${!values[@]}"; do
+        if [[ ${values[$i]} == "$var" ]]; then
+            current_index=$i
+            break
+        fi
+    done
+
+    # Set to next value (or first if not found/at end)
+    if ((current_index == -1 || current_index == ${#values[@]} - 1)); then
+        var="${values[0]}"
+    else
+        var="${values[$((current_index + 1))]}"
+    fi
+}
+
+# Common fzf header with keybinding hints
+# Usage: fzf_header "C-r: reload" "C-d: next" "C-s: prev"
+fzf_header() {
+    local parts=()
+    for hint in "$@"; do
+        parts+=("$hint")
+    done
+    echo ":: ${parts[*]}"
+}
+
+# Build fzf reload binding
+# Usage: fzf_reload_bind key "command to execute"
+fzf_reload_bind() {
+    local key=$1
+    local cmd=$2
+    echo "$key:reload($cmd)"
+}
+
+# Build fzf execute binding for tview
+# Usage: fzf_tview_bind key "command" [args...]
+fzf_tview_bind() {
+    local key=$1
+    shift
+    echo "$key:execute:tview $*"
+}
+
+# Check if command exists
+# Usage: has_command command_name
+has_command() {
+    command -v "$1" &>/dev/null
+}
+
+# Get file viewer command
+# Returns appropriate viewer (bat, cat, less) based on availability
+get_file_viewer() {
+    if has_command bat; then
+        echo "bat --plain --color=always"
+    else
+        echo "cat"
+    fi
+}
+
+# Get directory lister command
+# Returns appropriate lister (exa, ls) based on availability
+get_dir_lister() {
+    if has_command exa; then
+        echo "exa -laF --color=always"
+    else
+        echo "ls -la"
+    fi
+}
+

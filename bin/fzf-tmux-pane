@@ -5,6 +5,9 @@ set -o pipefail
 # shellcheck source=./_fzf-state
 . "${0%/*}/_fzf-state"
 
+# shellcheck source=./_fzf-common
+. "${0%/*}/_fzf-common"
+
 CMD="$1"
 shift
 
@@ -26,7 +29,7 @@ list)
     fi
 
     tmux list-panes "${args[@]}" "$@" \
-        -F "#S:#I.#P #{?#{&&:#W,#{!=:#W,#{pane_current_command}}},[#W] ,}\\#{pane_current_command}\\ \\#{pane_current_path}\\" |
+        -F '#S:#I.#P #{?#{&&:#W,#{!=:#W,#{pane_current_command}}},[#W] ,}\#{pane_current_command}\ \#{pane_current_path}\' |
         grep -v "^$(tmux list-panes -t "$TMUX_PANE" -F '#S:#I.#P')" |
         sed -e "s#$HOME#~#" \
             -e "s/\\\\\\([^\\]*\\)\\\\/\x1b[${ls_colors[ex]}m\\1\x1b[0m/" \
@@ -34,24 +37,18 @@ list)
     true
     ;;
 view)
+    setup_pager
     tmux capture-pane -t "$1" -ep | less -KMRc
     ;;
 run)
     fzf_args=()
-    while ((${#@} > 0)); do
-        if [[ $1 == "--" ]]; then
-            shift
-            break
-        fi
-        fzf_args+=("$1")
-        shift
-    done
+    parse_fzf_args fzf_args "$@"
 
     S[all]=true
 
     "$0" list |
         fzf --ansi --no-multi \
-            --header ":: C-r: reload; C-d: toggle all" \
+            --header "$(fzf_header 'C-r: reload' 'C-d: toggle all')" \
             --bind "ctrl-r:reload('$0' list)" \
             --bind "ctrl-s:reload('$0' toggle-all && '$0' list)" \
             --bind "ctrl-t:execute(tview '$0' view {1})" \
@@ -60,10 +57,6 @@ run)
         awk '{print $1}'
     ;;
 toggle-all)
-    if [[ ${S[all]} == true ]]; then
-        S[all]="false"
-    else
-        S[all]="true"
-    fi
+    toggle_boolean S[all]
     ;;
 esac
