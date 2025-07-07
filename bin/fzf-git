@@ -32,7 +32,7 @@ git_diff() {
         cycle_value S[mode] "cached" "file" "diff"
         ;;
     *)
-        exit 1
+        die "Unknown git_diff subcommand: $1"
         ;;
     esac
 }
@@ -99,7 +99,7 @@ git_log() {
         toggle_boolean S[graph]
         ;;
     *)
-        exit 1
+        die "Unknown git_log subcommand: $1"
         ;;
     esac
 }
@@ -216,5 +216,8 @@ stash)
     ;;
 tag)
     fzf-tag "${@:2}"
+    ;;
+*)
+    die "Usage: $0 {branch|diff|file|files|hash|log|remote|stash|tag} [args...]"
     ;;
 esac

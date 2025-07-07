@@ -35,6 +35,6 @@ toggle-all)
     toggle_boolean S[all]
     ;;
 *)
-    exit 1
+    die "Unknown subcommand: $CMD"
     ;;
 esac

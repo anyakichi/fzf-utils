@@ -59,4 +59,7 @@ run)
 toggle-all)
     toggle_boolean S[all]
     ;;
+*)
+    die "Unknown subcommand: $CMD"
+    ;;
 esac

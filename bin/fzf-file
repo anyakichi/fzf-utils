@@ -157,4 +157,7 @@ up-directory)
         S[path]=".."
     fi
     ;;
+*)
+    die "Unknown subcommand: $CMD"
+    ;;
 esac

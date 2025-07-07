@@ -54,7 +54,7 @@ issue() {
         toggle_boolean S[all]
         ;;
     *)
-        exit 1
+        die "Unknown issue subcommand: $1"
         ;;
     esac
 }
@@ -105,7 +105,7 @@ mr() {
         toggle_boolean S[all]
         ;;
     *)
-        exit 1
+        die "Unknown issue subcommand: $1"
         ;;
     esac
 }
@@ -116,5 +116,8 @@ issue)
     ;;
 mr)
     mr "${@:2}"
+    ;;
+*)
+    die "Usage: $0 {issue|mr} [subcommand] [args...]"
     ;;
 esac

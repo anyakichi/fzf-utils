@@ -24,7 +24,7 @@ containers() {
         toggle_boolean S[all]
         ;;
     *)
-        exit 1
+        die "Unknown containers subcommand: $1"
         ;;
     esac
 }
@@ -68,5 +68,8 @@ image)
     ;;
 volume)
     fzf-volume "$@"
+    ;;
+*)
+    die "Usage: $0 {container|containers|image|volume} [args...]"
     ;;
 esac

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -o pipefail
+
 # State management for fzf-utils
 # Provides persistent state across fzf invocations with proper locking and error handling
 

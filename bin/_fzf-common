@@ -1,5 +1,43 @@
 # Common utilities for fzf-utils commands
 
+# Error handling utilities
+# Usage: die "error message" [exit_code]
+die() {
+    local message=$1
+    local exit_code=${2:-1}
+    echo "Error: $message" >&2
+    exit "$exit_code"
+}
+
+# Print warning message
+# Usage: warn "warning message"
+warn() {
+    echo "Warning: $1" >&2
+}
+
+# Check required commands
+# Usage: require_command command_name [error_message]
+require_command() {
+    local cmd=$1
+    local msg=${2:-"Required command '$cmd' not found"}
+    if ! has_command "$cmd"; then
+        die "$msg"
+    fi
+}
+
+# Validate arguments count
+# Usage: require_args_count "$#" min_count [max_count] [error_message]
+require_args_count() {
+    local actual=$1
+    local min=$2
+    local max=${3:-$min}
+    local msg=${4:-"Invalid number of arguments"}
+
+    if ((actual < min || actual > max)); then
+        die "$msg (expected $min-$max, got $actual)"
+    fi
+}
+
 # Parse fzf arguments from command line
 # Usage: parse_fzf_args fzf_args "$@"
 # Separates fzf arguments from command arguments using -- delimiter
