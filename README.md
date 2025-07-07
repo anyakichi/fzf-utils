@@ -1,14 +1,21 @@
 # fzf-utils
 
-fzf utilities for zsh.
-
-It can be used for bash but an initialization script for bash does not
-exist for now.
+fzf utilities for zsh and bash.
 
 ## Installation
 
-You can add the plugin by plugin managers.  If you use zinit, add `zinit
+### Zsh
+
+You can add the plugin by plugin managers. If you use zinit, add `zinit
 light anyakichi/fzf-utils` to your `.zshrc`.
+
+### Bash
+
+Source the bash script in your `.bashrc`:
+
+```bash
+source /path/to/fzf-utils/fzf-utils.bash
+```
 
 ## Helper commands
 
