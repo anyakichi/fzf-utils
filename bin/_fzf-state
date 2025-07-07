@@ -1,36 +1,148 @@
 #!/bin/bash
 
+# State management for fzf-utils
+# Provides persistent state across fzf invocations with proper locking and error handling
+
 declare -A S
 
+# Error handler
+_fzf_state_error() {
+    echo "fzf-state error: $1" >&2
+    return 1
+}
+
+# Acquire file lock with timeout
+# Usage: _fzf_state_lock [timeout_seconds]
+_fzf_state_lock() {
+    local timeout=${1:-5}
+    local lockfile="${FZF_STATE}.lock"
+    local count=0
+
+    while ! (
+        set -C
+        echo $$ >"$lockfile"
+    ) 2>/dev/null; do
+        if ((count >= timeout * 10)); then
+            # Check if lock holder is still alive
+            if [[ -f $lockfile ]]; then
+                local pid
+                pid=$(<"$lockfile")
+                if ! kill -0 "$pid" 2>/dev/null; then
+                    # Process is dead, remove stale lock
+                    rm -f "$lockfile"
+                    continue
+                fi
+            fi
+            _fzf_state_error "Failed to acquire lock after ${timeout}s"
+            return 1
+        fi
+        sleep 0.1
+        ((count++))
+    done
+    return 0
+}
+
+# Release file lock
+_fzf_state_unlock() {
+    local lockfile="${FZF_STATE}.lock"
+    if [[ -f $lockfile ]] && [[ $(<"$lockfile") == $$ ]]; then
+        rm -f "$lockfile"
+    fi
+}
+
+# Load state from file with validation
 load_state() {
-    if [[ -e $FZF_STATE ]]; then
-        while IFS=$'\n' read -r line; do
-            S[${line%%=*}]=${line#*=}
-        done <"$FZF_STATE"
+    if [[ ! -e $FZF_STATE ]]; then
+        return 0
     fi
+
+    if ! _fzf_state_lock; then
+        return 1
+    fi
+
+    # Clear existing state
+    S=()
+
+    # Read state file with error handling
+    while IFS='=' read -r key value; do
+        # Skip empty lines and validate format
+        if [[ -n $key ]] && [[ $key =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+            S[$key]=$value
+        fi
+    done <"$FZF_STATE" 2>/dev/null || {
+        _fzf_state_unlock
+        _fzf_state_error "Failed to read state file"
+        return 1
+    }
+
+    _fzf_state_unlock
+    return 0
 }
 
+# Save state to file with atomic write
 save_state() {
-    if [[ -e $FZF_STATE ]]; then
-        echo -n >"$FZF_STATE"
-        for key in "${!S[@]}"; do
-            echo "${key}=${S[$key]}" >>"$FZF_STATE"
-        done
+    if [[ ! -e $FZF_STATE ]]; then
+        return 0
     fi
+
+    if ! _fzf_state_lock; then
+        return 1
+    fi
+
+    local tmpfile="${FZF_STATE}.tmp.$$"
+
+    # Write to temporary file first
+    {
+        for key in "${!S[@]}"; do
+            printf '%s=%s\n' "$key" "${S[$key]}"
+        done
+    } >"$tmpfile" 2>/dev/null || {
+        rm -f "$tmpfile"
+        _fzf_state_unlock
+        _fzf_state_error "Failed to write state file"
+        return 1
+    }
+
+    # Atomic rename
+    mv -f "$tmpfile" "$FZF_STATE" 2>/dev/null || {
+        rm -f "$tmpfile"
+        _fzf_state_unlock
+        _fzf_state_error "Failed to update state file"
+        return 1
+    }
+
+    _fzf_state_unlock
+    return 0
 }
 
+# Wrapper for fzf command that saves state before execution
 fzf() {
     save_state
     command fzf "$@"
 }
 
-if [[ $FZF_STATE ]]; then
-    load_state
-    trap 'save_state' 0
-else
-    FZF_STATE=$(mktemp)
-    export FZF_STATE
+# Cleanup function
+_fzf_state_cleanup() {
+    save_state
+    _fzf_state_unlock
 
-    # shellcheck disable=SC2064
-    trap "rm -f '$FZF_STATE'" 0
+    # Only remove state file if we created it (not inherited)
+    if [[ -n $_FZF_STATE_OWNER ]] && [[ $_FZF_STATE_OWNER == $$ ]]; then
+        rm -f "$FZF_STATE" "${FZF_STATE}.lock"
+    fi
+}
+
+# Initialize state management
+if [[ $FZF_STATE ]]; then
+    # State file exists, load it
+    load_state
+    trap '_fzf_state_cleanup' EXIT
+else
+    # Create new state file
+    FZF_STATE=$(mktemp -t fzf-state.XXXXXX)
+    export FZF_STATE
+    export _FZF_STATE_OWNER=$$
+
+    # Set up cleanup trap
+    trap '_fzf_state_cleanup' EXIT
 fi
