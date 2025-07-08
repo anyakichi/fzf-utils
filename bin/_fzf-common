@@ -58,6 +58,7 @@ parse_fzf_args() {
 # Toggle boolean state value
 # Usage: toggle_boolean S[all]
 toggle_boolean() {
+    # shellcheck disable=SC2178,SC2128
     local -n var=$1
     if [[ $var == true ]]; then
         var="false"
@@ -112,6 +113,7 @@ preview_directory() {
 # Increment page number
 # Usage: next_page S[page]
 next_page() {
+    # shellcheck disable=SC2178,SC2128
     local -n _page_ref=$1
     _page_ref=$((_page_ref + 1))
 }
@@ -119,6 +121,7 @@ next_page() {
 # Decrement page number (min 1)
 # Usage: prev_page S[page]
 prev_page() {
+    # shellcheck disable=SC2178,SC2128
     local -n _page_ref=$1
     if ((_page_ref > 1)); then
         _page_ref=$((_page_ref - 1))
@@ -128,6 +131,7 @@ prev_page() {
 # Cycle through values
 # Usage: cycle_value S[mode] "value1" "value2" "value3"
 cycle_value() {
+    # shellcheck disable=SC2178,SC2128
     local -n var=$1
     shift
     local values=("$@")

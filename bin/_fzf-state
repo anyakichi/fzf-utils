@@ -12,6 +12,7 @@ _fzf_state_error() {
 
 # Acquire file lock with timeout
 # Usage: _fzf_state_lock [timeout_seconds]
+# shellcheck disable=SC2120
 _fzf_state_lock() {
     local timeout=${1:-5}
     local lockfile="${FZF_STATE}.lock"
@@ -44,12 +45,13 @@ _fzf_state_lock() {
 # Release file lock
 _fzf_state_unlock() {
     local lockfile="${FZF_STATE}.lock"
-    if [[ -f $lockfile ]] && [[ $(<"$lockfile") == $$ ]]; then
+    if [[ -f $lockfile ]] && [[ $(<"$lockfile") == "$$" ]]; then
         rm -f "$lockfile"
     fi
 }
 
 # Load state from file with validation
+# shellcheck disable=SC2120
 load_state() {
     if [[ ! -e $FZF_STATE ]]; then
         return 0
@@ -79,6 +81,7 @@ load_state() {
 }
 
 # Save state to file with atomic write
+# shellcheck disable=SC2120
 save_state() {
     if [[ ! -e $FZF_STATE ]]; then
         return 0
@@ -126,7 +129,7 @@ _fzf_state_cleanup() {
     _fzf_state_unlock
 
     # Only remove state file if we created it (not inherited)
-    if [[ -n $_FZF_STATE_OWNER ]] && [[ $_FZF_STATE_OWNER == $$ ]]; then
+    if [[ -n $_FZF_STATE_OWNER ]] && [[ $_FZF_STATE_OWNER == "$$" ]]; then
         rm -f "$FZF_STATE" "${FZF_STATE}.lock"
     fi
 }
