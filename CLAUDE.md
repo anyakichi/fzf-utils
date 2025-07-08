@@ -72,5 +72,5 @@ When adding features, check for these optional dependencies:
 - fd (preferred over find for file operations)
 - bat (for syntax highlighting in previews)
 - ripgrep (for grep functionality)
-- exa (for enhanced directory listings)
+- eza or exa (for enhanced directory listings, eza is preferred)
 - tmux (for pane/window features)

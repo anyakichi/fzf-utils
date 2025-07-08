@@ -88,7 +88,9 @@ view)
         view_file "$1"
     else
         [[ -d $1 ]]
-        if has_command exa; then
+        if has_command eza; then
+            eza -T -L3 --color=always "$1" | less
+        elif has_command exa; then
             exa -T -L3 --color=always "$1" | less
         else
             /bin/ls --color "$1" | less

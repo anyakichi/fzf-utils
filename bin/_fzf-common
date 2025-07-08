@@ -1,3 +1,4 @@
+#!/bin/bash
 # Common utilities for fzf-utils commands
 
 # Error handling utilities
@@ -99,7 +100,9 @@ preview_file() {
 # Usage: preview_directory dirname
 preview_directory() {
     local dir=$1
-    if command -v exa &>/dev/null; then
+    if command -v eza &>/dev/null; then
+        eza -laF --color=always "$dir"
+    elif command -v exa &>/dev/null; then
         exa -laF --color=always "$dir"
     else
         ls -la "$dir"
@@ -189,9 +192,11 @@ get_file_viewer() {
 }
 
 # Get directory lister command
-# Returns appropriate lister (exa, ls) based on availability
+# Returns appropriate lister (eza, exa, ls) based on availability
 get_dir_lister() {
-    if has_command exa; then
+    if has_command eza; then
+        echo "eza -laF --color=always"
+    elif has_command exa; then
         echo "exa -laF --color=always"
     else
         echo "ls -la"
