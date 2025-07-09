@@ -51,7 +51,6 @@ _fzf_state_unlock() {
 }
 
 # Load state from file with validation
-# shellcheck disable=SC2120
 load_state() {
     if [[ ! -e $FZF_STATE ]]; then
         return 0
@@ -81,7 +80,6 @@ load_state() {
 }
 
 # Save state to file with atomic write
-# shellcheck disable=SC2120
 save_state() {
     if [[ ! -e $FZF_STATE ]]; then
         return 0
@@ -135,7 +133,7 @@ _fzf_state_cleanup() {
 }
 
 # Initialize state management
-if [[ $FZF_STATE ]]; then
+if [[ -v FZF_STATE ]]; then
     # State file exists, load it
     load_state
     trap '_fzf_state_cleanup' EXIT
