@@ -48,7 +48,7 @@ run)
 
     "$0" list |
         fzf --ansi --no-multi \
-            --header "$(fzf_header 'C-r: reload' 'C-d: toggle all')" \
+            --header "$(fzf_header 'C-r: reload' 'C-s: toggle all')" \
             --bind "ctrl-r:reload('$0' list)" \
             --bind "ctrl-s:reload('$0' toggle-all && '$0' list)" \
             --bind "ctrl-t:execute(tview '$0' view {1})" \
