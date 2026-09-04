@@ -1,9 +1,20 @@
 # shellcheck shell=bash
 
 fzf-utils::_cdr() {
-    cdr -l | sed 's/^[[:digit:]]*[[:space:]]*//' |
+    local strip='sed "s/^[[:digit:]]*[[:space:]]*//"'
+    local file reload
+
+    # The reload runs in a fresh zsh, so set cdr up there the same way as in
+    # this shell instead of depending on the user's rc files.
+    reload='autoload -Uz cdr; '
+    if zstyle -s ':chpwd:*' recent-dirs-file file && [[ -n $file ]]; then
+        reload+="zstyle ':chpwd:*' recent-dirs-file ${(q)file}; "
+    fi
+    reload+="cdr -l | $strip"
+
+    cdr -l | eval "$strip" |
         fzf --no-multi \
-            --bind 'ctrl-r:reload:zsh -c "source ~/.zsh/cdr.zsh; cdr -l | sed \"s/^[[:digit:]]*[[:space:]]*//\""'
+            --bind "ctrl-r:reload:zsh -c ${(q)reload}"
 }
 
 fzf-utils::_docker-container() {
@@ -22,7 +33,14 @@ fzf-utils::_file() {
     setopt localoptions pipefail
     local base dir raw_dir
 
-    eval "dir=$1"
+    # Expand quoting, ~ and $VAR in the typed word. Never eval a word that
+    # contains a command substitution or other operators: the user has typed
+    # it as an argument, not asked to run it.
+    if [[ $1 == *[\`\(\)\;\|\&\<\>]* ]]; then
+        dir=${(Q)1}
+    else
+        eval "dir=$1"
+    fi
     if [[ -d "$dir" ]]; then
         base=
         raw_dir="$1"

@@ -4,6 +4,20 @@
 
 declare -A S
 
+# Serialized copy of S as it was last loaded from or written to the state
+# file. save_state compares against it so that processes which only read the
+# state (previews, list commands) never write a stale copy back over changes
+# made concurrently by other processes.
+_FZF_STATE_SNAPSHOT=
+
+# Serialize S in a stable order
+_fzf_state_serialize() {
+    local key
+    for key in "${!S[@]}"; do
+        printf '%s=%s\n' "$key" "${S[$key]}"
+    done | sort
+}
+
 # Error handler
 _fzf_state_error() {
     echo "fzf-state error: $1" >&2
@@ -76,12 +90,20 @@ load_state() {
     }
 
     _fzf_state_unlock
+    _FZF_STATE_SNAPSHOT=$(_fzf_state_serialize)
     return 0
 }
 
 # Save state to file with atomic write
 save_state() {
     if [[ ! -e $FZF_STATE ]]; then
+        return 0
+    fi
+
+    # Nothing changed since load: do not clobber other processes' updates
+    local content
+    content=$(_fzf_state_serialize)
+    if [[ $content == "$_FZF_STATE_SNAPSHOT" ]]; then
         return 0
     fi
 
@@ -92,11 +114,7 @@ save_state() {
     local tmpfile="${FZF_STATE}.tmp.$$"
 
     # Write to temporary file first
-    {
-        for key in "${!S[@]}"; do
-            printf '%s=%s\n' "$key" "${S[$key]}"
-        done
-    } >"$tmpfile" 2>/dev/null || {
+    printf '%s\n' "$content" >"$tmpfile" 2>/dev/null || {
         rm -f "$tmpfile"
         _fzf_state_unlock
         _fzf_state_error "Failed to write state file"
@@ -112,6 +130,7 @@ save_state() {
     }
 
     _fzf_state_unlock
+    _FZF_STATE_SNAPSHOT=$content
     return 0
 }
 
@@ -123,12 +142,13 @@ fzf() {
 
 # Cleanup function
 _fzf_state_cleanup() {
-    save_state
-    _fzf_state_unlock
-
     # Only remove state file if we created it (not inherited)
     if [[ -n $_FZF_STATE_OWNER ]] && [[ $_FZF_STATE_OWNER == "$$" ]]; then
+        _fzf_state_unlock
         rm -f "$FZF_STATE" "${FZF_STATE}.lock"
+    else
+        save_state
+        _fzf_state_unlock
     fi
 }
 

@@ -30,7 +30,7 @@ list)
 
     tmux list-panes "${args[@]}" "$@" \
         -F '#S:#I.#P #{?#{&&:#W,#{!=:#W,#{pane_current_command}}},[#W] ,}\#{pane_current_command}\ \#{pane_current_path}\' |
-        grep -v "^$(tmux list-panes -t "$TMUX_PANE" -F '#S:#I.#P')" |
+        awk -v self="$(tmux display-message -p -t "$TMUX_PANE" '#S:#I.#P')" '$1 != self' |
         sed -e "s#$HOME#~#" \
             -e "s/\\\\\\([^\\]*\\)\\\\/\x1b[${ls_colors[ex]}m\\1\x1b[0m/" \
             -e "s/\\\\\\([^\\]*\\)\\\\/\x1b[${ls_colors[di]}m\\1\x1b[0m/"

@@ -32,7 +32,7 @@ do_find() {
 
     echo "$header_pre$HEADER"
     find -L "${3:-.}" -mindepth 1 -xdev -path '*/\.*' -prune -o "${opts[@]}" 2>/dev/null |
-        cut -b3-
+        sed 's#^\./##'
 }
 
 do_fd() {

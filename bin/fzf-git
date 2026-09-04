@@ -16,8 +16,13 @@ git_diff() {
         local args=()
 
         if [[ ${S[mode]} == "file" ]]; then
+            local paths=("${@:2}")
+            # Callers pass "--" for git diff; it is not a file name
+            if [[ ${paths[0]} == "--" ]]; then
+                paths=("${paths[@]:1}")
+            fi
             setup_pager
-            view_file "${@:2}"
+            view_file "${paths[@]}"
         else
             if [[ ${S[mode]} == "cached" ]]; then
                 args+=(--cached)
@@ -39,17 +44,31 @@ git_diff() {
 
 git_files() {
     local -A files=()
+    local top entry full rel
 
-    while IFS=$'\n' read -r line; do
-        echo "$line"
-        files["${line# [^ ]* }"]=1
-    done < <(git -c color.status=always status --short --branch)
+    top=$(git rev-parse --show-toplevel)
 
-    while IFS=$'\n' read -r line; do
-        if [[ ${files["$line"]} != 1 ]]; then
-            echo " H $line"
+    # Collect the paths "git status" reports, from an uncolored and unquoted
+    # listing. With -z the paths are relative to the repository root, so they
+    # are matched against "git ls-files --full-name" below.
+    while IFS= read -r -d '' entry; do
+        files[${entry:3}]=1
+        # Renames and copies carry the original path as an extra entry
+        if [[ ${entry:0:2} == *[RC]* ]]; then
+            IFS= read -r -d '' entry
+            files[$entry]=1
         fi
-    done < <(git ls-files "$(git rev-parse --show-toplevel)")
+    done < <(git status --porcelain=v1 -z)
+
+    git -c color.status=always status --short --branch
+
+    # Both listings enumerate the same files in the same order; the first
+    # gives the root-relative key and the second the path to display.
+    while IFS= read -r -d '' full && IFS= read -r -d '' rel <&3; do
+        if [[ ${files[$full]} != 1 ]]; then
+            echo " H $rel"
+        fi
+    done < <(git ls-files -z --full-name "$top") 3< <(git ls-files -z "$top")
 }
 
 git_log() {
@@ -62,9 +81,9 @@ git_log() {
         fi
 
         if [[ ${S[target]} ]]; then
-            # S[target] is already escaped
-            # shellcheck disable=SC2206
-            args+=(${S[target]})
+            # S[target] holds printf %q escaped words written by _files and
+            # _switch below; eval is needed to undo that escaping
+            eval "args+=(${S[target]})"
         fi
 
         git -c core.pager="less -+F -KMc" log --date=short --color=always \
