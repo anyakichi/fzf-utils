@@ -83,12 +83,16 @@ These key bindings are defined by default.
 If you dislike this default, set FZF_UTILS_NO_MAPPINGS before loading
 fzf-utils to stop setting default values.
 
+Ctrl-s is used for terminal flow control by default, so the tmux pane
+widget only works after disabling it with `stty -ixon`.
+
 ## Configuration
 
 ### Environment Variables
 
 - `FZF_UTILS_NO_MAPPINGS`: Set this to disable default key bindings
 - `FZF_GIT_DEFAULT_DIR`: Default directory for git operations when not in a repository
+- `FZF_GIT_OPTS`: Extra fzf options for `fzf-git` commands (default: `--height 50%`)
 
 ## Features
 

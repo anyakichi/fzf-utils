@@ -10,47 +10,21 @@ die() {
     exit "$exit_code"
 }
 
-# Print warning message
-# Usage: warn "warning message"
-warn() {
-    echo "Warning: $1" >&2
-}
-
-# Check required commands
-# Usage: require_command command_name [error_message]
-require_command() {
-    local cmd=$1
-    local msg=${2:-"Required command '$cmd' not found"}
-    if ! has_command "$cmd"; then
-        die "$msg"
-    fi
-}
-
-# Validate arguments count
-# Usage: require_args_count "$#" min_count [max_count] [error_message]
-require_args_count() {
-    local actual=$1
-    local min=$2
-    local max=${3:-$min}
-    local msg=${4:-"Invalid number of arguments"}
-
-    if ((actual < min || actual > max)); then
-        die "$msg (expected $min-$max, got $actual)"
-    fi
-}
-
-# Parse fzf arguments from command line
-# Usage: parse_fzf_args fzf_args "$@"
-# Separates fzf arguments from command arguments using -- delimiter
+# Split the command line into fzf arguments and command arguments at "--"
+# Usage: parse_fzf_args fzf_args cmd_args "$@"
+# Arguments before "--" go to fzf_args, arguments after it to cmd_args.
 parse_fzf_args() {
-    local -n _args=$1
-    shift
-    while ((${#@} > 0)); do
+    local -n _fzf_args=$1 _cmd_args=$2
+    shift 2
+    _fzf_args=()
+    _cmd_args=()
+    while (($# > 0)); do
         if [[ $1 == "--" ]]; then
             shift
-            break
+            _cmd_args=("$@")
+            return
         fi
-        _args+=("$1")
+        _fzf_args+=("$1")
         shift
     done
 }
@@ -77,36 +51,10 @@ setup_pager() {
 # Usage: view_file filename
 view_file() {
     local file=$1
-    if command -v bat &>/dev/null; then
+    if has_command bat; then
         bat --plain --color=always --paging=always "$file"
     else
         less "$file"
-    fi
-}
-
-# Preview file with syntax highlighting
-# Usage: preview_file filename [max_lines]
-preview_file() {
-    local file=$1
-    local max_lines=${2:-500}
-
-    if command -v bat &>/dev/null; then
-        bat --style=plain --color=always "$file" | head -n "$max_lines"
-    else
-        head -n "$max_lines" "$file"
-    fi
-}
-
-# Preview directory listing
-# Usage: preview_directory dirname
-preview_directory() {
-    local dir=$1
-    if command -v eza &>/dev/null; then
-        eza -laF --color=always "$dir"
-    elif command -v exa &>/dev/null; then
-        exa -laF --color=always "$dir"
-    else
-        ls -la "$dir"
     fi
 }
 
@@ -135,7 +83,7 @@ cycle_value() {
     local -n var=$1
     shift
     local values=("$@")
-    local current_index=-1
+    local current_index=-1 i
 
     # Find current value index
     for i in "${!values[@]}"; do
@@ -156,27 +104,7 @@ cycle_value() {
 # Common fzf header with keybinding hints
 # Usage: fzf_header "C-r: reload" "C-d: next" "C-s: prev"
 fzf_header() {
-    local parts=()
-    for hint in "$@"; do
-        parts+=("$hint")
-    done
-    echo ":: ${parts[*]}"
-}
-
-# Build fzf reload binding
-# Usage: fzf_reload_bind key "command to execute"
-fzf_reload_bind() {
-    local key=$1
-    local cmd=$2
-    echo "$key:reload($cmd)"
-}
-
-# Build fzf execute binding for tview
-# Usage: fzf_tview_bind key "command" [args...]
-fzf_tview_bind() {
-    local key=$1
-    shift
-    echo "$key:execute:tview $*"
+    echo ":: $*"
 }
 
 # Check if command exists

@@ -8,27 +8,33 @@ set -o pipefail
 # shellcheck source=./_fzf-common
 . "${0%/*}/_fzf-common"
 
-issue() {
-    case "$1" in
+# Usage: glab_widget {issue|mr} subcommand [args...]
+# Items are listed as "#123 ..." for issues and "!123 ..." for merge requests
+glab_widget() {
+    local type=$1
+    local cmd=$2
+    shift 2
+
+    case "$cmd" in
     run)
         local view
-        view="'$0' issue view \$(cut -d ' ' -f1 <<< {})"
+        view="'$0' $type view \$(sed -E 's/^[#!]([0-9]+).*$/\\1/' <<< {})"
 
         S[page]=1
 
-        $0 issue list |
+        "$0" "$type" list |
             fzf --ansi --multi --preview-window right:70% \
                 --header "$(fzf_header 'C-r: toggle all' 'C-d: next page' 'C-s: prev page')" \
-                --bind "ctrl-d:reload:'$0' issue next-page && '$0' issue list" \
-                --bind "ctrl-s:reload:'$0' issue prev-page && '$0' issue list" \
-                --bind "ctrl-r:reload:'$0' issue toggle-all && '$0' issue list" \
+                --bind "ctrl-d:reload:'$0' $type next-page && '$0' $type list" \
+                --bind "ctrl-s:reload:'$0' $type prev-page && '$0' $type list" \
+                --bind "ctrl-r:reload:'$0' $type toggle-all && '$0' $type list" \
                 --bind "ctrl-t:execute:tview $view" \
                 --preview "$view | head -n 500" \
-                "${@:2}" |
-            sed -E 's/^#([0-9]+).*$/\1/'
+                "$@" |
+            sed -E 's/^[#!]([0-9]+).*$/\1/'
         ;;
     list)
-        args=()
+        local args=()
 
         if [[ ${S[all]} == true ]]; then
             args+=(-A)
@@ -38,11 +44,11 @@ issue() {
             args+=(-p "${S[page]}")
         fi
 
-        glab issue list -P 100 "${args[@]}" | sed -e 1d -e '/^$/d'
+        glab "$type" list -P 100 "${args[@]}" | sed -e 1d -e '/^$/d'
         ;;
     view)
         setup_pager
-        glab issue view -c -P 100 "${@:2}"
+        glab "$type" view -c -P 100 "$@"
         ;;
     next-page)
         next_page S[page]
@@ -54,68 +60,14 @@ issue() {
         toggle_boolean S[all]
         ;;
     *)
-        die "Unknown issue subcommand: $1"
-        ;;
-    esac
-}
-
-mr() {
-    case "$1" in
-    run)
-        local view
-        view="'$0' mr view \$(sed -E 's/^!([0-9]+).*$/\1/' <<< {})"
-
-        S[page]=1
-
-        $0 mr list |
-            fzf --ansi --multi --preview-window right:70% \
-                --header "$(fzf_header 'C-r: toggle all' 'C-d: next page' 'C-s: prev page')" \
-                --bind "ctrl-d:reload:'$0' mr next-page && '$0' mr list" \
-                --bind "ctrl-s:reload:'$0' mr prev-page && '$0' mr list" \
-                --bind "ctrl-r:reload:'$0' mr toggle-all && '$0' mr list" \
-                --bind "ctrl-t:execute:tview $view" \
-                --preview "$view | head -n 500" \
-                "${@:2}" |
-            sed -E 's/^!([0-9]+).*$/\1/'
-        ;;
-    list)
-        args=()
-
-        if [[ ${S[all]} == true ]]; then
-            args+=(-A)
-        fi
-
-        if [[ ${S[page]} ]]; then
-            args+=(-p "${S[page]}")
-        fi
-
-        glab mr list -P 100 "${args[@]}" | sed -e 1d -e '/^$/d'
-        ;;
-    view)
-        setup_pager
-        glab mr view -c -P 100 "${@:2}"
-        ;;
-    next-page)
-        next_page S[page]
-        ;;
-    prev-page)
-        prev_page S[page]
-        ;;
-    toggle-all)
-        toggle_boolean S[all]
-        ;;
-    *)
-        die "Unknown issue subcommand: $1"
+        die "Unknown $type subcommand: $cmd"
         ;;
     esac
 }
 
 case "$1" in
-issue)
-    issue "${@:2}"
-    ;;
-mr)
-    mr "${@:2}"
+issue | mr)
+    glab_widget "$@"
     ;;
 *)
     die "Usage: $0 {issue|mr} [subcommand] [args...]"

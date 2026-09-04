@@ -12,7 +12,7 @@ fzf-utils::_file() {
 
 # History widget implementation for bash
 fzf-utils::_history() {
-    local selected num
+    local selected
     # Bash history format is different from zsh
     history |
         fzf --tac --no-sort --reverse \
@@ -91,7 +91,7 @@ fzf-utils::_rg() {
 # File widget - inserts selected files to command line
 fzf-utils::file-widget() {
     local selected
-    selected=$(fzf-utils::_file)
+    selected=$(fzf-utils::_file "$@")
     READLINE_LINE="${READLINE_LINE:0:READLINE_POINT}$selected${READLINE_LINE:READLINE_POINT}"
     READLINE_POINT=$((READLINE_POINT + ${#selected}))
 }
@@ -99,7 +99,7 @@ fzf-utils::file-widget() {
 # History widget - replaces command line with selected history entry
 fzf-utils::history-widget() {
     local selected
-    selected=$(fzf-utils::_history)
+    selected=$(fzf-utils::_history "$READLINE_LINE")
     if [[ -n $selected ]]; then
         READLINE_LINE="$selected"
         READLINE_POINT=${#selected}

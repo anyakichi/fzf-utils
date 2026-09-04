@@ -15,27 +15,32 @@ shift
 
 case "$CMD" in
 list)
+    # Usage: list [grep options...] pattern
     HEADER=":: C-d: change directory; C-s: up directory; C-r: cycle restricted"
     header_pre=""
 
-    [[ ${#@} == 0 || -z ${@: -1} ]] && exit 0
+    [[ $# == 0 || -z ${!#} ]] && exit 0
 
-    args=("$@")
+    pattern=${!#}
+    args=("${@:1:$#-1}")
+    paths=()
     if [[ -n ${S[path]} ]]; then
-        args+=("${S[path]}")
+        paths+=("${S[path]}")
     fi
 
-    if command -v rg >/dev/null 2>&1; then
+    if has_command rg; then
         if [[ -n ${S[restricted]} ]]; then
             args+=("${S[restricted]}")
             header_pre+="${S[restricted]} "
         fi
 
         echo "$header_pre$HEADER"
-        rg --one-file-system --line-number --no-heading --color=always --smart-case "${args[@]}"
+        # rg searches stdin instead of the directory when stdin is a pipe
+        rg --one-file-system --line-number --no-heading --color=always --smart-case \
+            "${args[@]}" -e "$pattern" "${paths[@]}" </dev/null
     else
         echo "$header_pre$HEADER"
-        grep -rin --color=always "${args[@]}"
+        grep -rin --color=always "${args[@]}" -e "$pattern" "${paths[@]}"
     fi
     exit 0
     ;;
@@ -49,19 +54,20 @@ view)
     ;;
 run)
     fzf_args=()
-    parse_fzf_args fzf_args "$@"
+    cmd_args=()
+    parse_fzf_args fzf_args cmd_args "$@"
 
-    "$0" list "$@" |
+    "$0" list "${cmd_args[@]}" |
         fzf -m --ansi --disabled \
             --header-lines 1 \
             --delimiter : \
-            --bind "change:reload:sleep 0.1; "$0" list {q}" \
+            --bind "change:reload:sleep 0.1; '$0' list {q}" \
             --bind "ctrl-d:reload:fzf-file change-directory && '$0' list {q}" \
             --bind "ctrl-r:reload:'$0' cycle-restricted && '$0' list {q}" \
             --bind "ctrl-s:reload:fzf-file up-directory && '$0' list {q}" \
             --bind "ctrl-t:execute:tview '$0' view {1} {2}" \
             --preview "'$0' view {1} {2}" \
-            --preview-window hidden,+{2}+3/3 \
+            --preview-window 'hidden,+{2}+3/3' \
             "${fzf_args[@]}" |
         command cut -d ':' -f1
     ;;

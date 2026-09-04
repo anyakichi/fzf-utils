@@ -42,7 +42,7 @@ view)
     ;;
 run)
     fzf_args=()
-    parse_fzf_args fzf_args "$@"
+    parse_fzf_args fzf_args cmd_args "$@"
 
     S[all]=true
 

@@ -21,7 +21,7 @@ list)
     ;;
 run)
     fzf_args=()
-    parse_fzf_args fzf_args "$@"
+    parse_fzf_args fzf_args cmd_args "$@"
 
     "$0" list |
         fzf -m --header-lines=1 \

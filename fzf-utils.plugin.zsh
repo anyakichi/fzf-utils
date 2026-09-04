@@ -224,9 +224,17 @@ zle -N fzf-utils::history-widget
 
 fzf-utils::tmux-pane-widget() {
     local result
+
+    if [[ -z $TMUX ]]; then
+        zle -M "Not in a tmux session"
+        return 1
+    fi
+
     result=$(fzf-tmux-pane run --border)
     zle reset-prompt
-    tmux switch-client -t "${result}"
+    if [[ -n $result ]]; then
+        tmux switch-client -t "${result}"
+    fi
 }
 zle -N fzf-utils::tmux-pane-widget
 

@@ -87,7 +87,6 @@ view)
     if [[ -f $1 ]]; then
         view_file "$1"
     else
-        [[ -d $1 ]]
         if has_command eza; then
             eza -T -L3 --color=always "$1" | less
         elif has_command exa; then
@@ -99,22 +98,14 @@ view)
     ;;
 run)
     fzf_args=()
-    while ((${#@} > 0)); do
-        if [[ $1 == "--" ]]; then
-            shift
-            break
-        fi
-        fzf_args+=("$1")
-        shift
-    done
+    cmd_args=()
+    parse_fzf_args fzf_args cmd_args "$@"
 
     S[type]=a
     S[depth]=0
     S[restricted]=""
-    if [[ ${#@} != 0 ]]; then
-        [[ $1 ]] && S[type]=$1
-        [[ $2 ]] && S[depth]=$2
-    fi
+    [[ ${cmd_args[0]} ]] && S[type]=${cmd_args[0]}
+    [[ ${cmd_args[1]} ]] && S[depth]=${cmd_args[1]}
     [[ $(basename "$PWD") =~ ^\. ]] && S[restricted]="-uu"
 
     "$0" list |
