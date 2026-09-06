@@ -11,28 +11,77 @@ set -o pipefail
 CMD="$1"
 shift
 
+# Use procs if available, otherwise fall back to ps.
+# The two commands differ in header line count and PID column position.
+if has_command procs; then
+    USE_PROCS=true
+    HEADER_LINES=2
+    PID_FIELD=1
+else
+    USE_PROCS=false
+    HEADER_LINES=1
+    PID_FIELD=2
+fi
+
 case "$CMD" in
 list)
-    if [[ ${S[all]} == true ]]; then
-        ps aux
+    # All processes by default; S[user] restricts to the current user's.
+    if [[ $USE_PROCS == true ]]; then
+        # The fzf query is passed to procs as search keywords instead of
+        # being matched by fzf itself (see --disabled in run).
+        read -ra keywords <<<"$*"
+        if [[ ${S[user]} == true ]]; then
+            # procs has no user filter; the keyword matches the User column
+            # (and the Command column, so a few foreign processes may leak in)
+            keywords=("$USER" "${keywords[@]}")
+        fi
+        procs_args=()
+        if [[ ${S[large]} == true ]]; then
+            # Built-in "large" config adds State/TTY/TCP/UDP/... columns so
+            # that keywords can match e.g. listening ports.
+            procs_args+=(--use-config large)
+        fi
+        procs --color always --pager disable --and "${procs_args[@]}" \
+            -- "${keywords[@]}"
     else
-        ps ux
+        if [[ ${S[user]} == true ]]; then
+            ps ux
+        else
+            ps aux
+        fi
     fi
     ;;
 run)
     fzf_args=()
     parse_fzf_args fzf_args cmd_args "$@"
 
+    if [[ $USE_PROCS == true ]]; then
+        # Let procs do the searching: disable fzf matching and reload on
+        # every query change.
+        fzf_args=(
+            --disabled
+            --bind "change:reload('$0' list {q})"
+            --bind "ctrl-s:reload('$0' toggle-large && '$0' list {q})"
+            "${fzf_args[@]}"
+        )
+        header=$(fzf_header 'C-r: reload' 'C-d: toggle user only' 'C-s: toggle large')
+    else
+        header=$(fzf_header 'C-r: reload' 'C-d: toggle user only')
+    fi
+
     "$0" list |
-        fzf -m --header-lines=1 \
-            --header "$(fzf_header 'C-r: reload' 'C-d: toggle all')" \
-            --bind "ctrl-r:reload('$0' list)" \
-            --bind "ctrl-d:reload('$0' toggle-all && '$0' list)" \
+        fzf -m --ansi --header-lines="$HEADER_LINES" \
+            --header "$header" \
+            --bind "ctrl-r:reload('$0' list {q})" \
+            --bind "ctrl-d:reload('$0' toggle-user && '$0' list {q})" \
             "${fzf_args[@]}" |
-        awk '{print $2}'
+        awk -v f="$PID_FIELD" '{print $f}'
     ;;
-toggle-all)
-    toggle_boolean S[all]
+toggle-user)
+    toggle_boolean S[user]
+    ;;
+toggle-large)
+    toggle_boolean S[large]
     ;;
 *)
     die "Unknown subcommand: $CMD"

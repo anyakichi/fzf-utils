@@ -121,3 +121,4 @@ Commands gracefully degrade when optional tools aren't available:
 - `fd` → `find` for file operations
 - `bat` → `less` for file previews
 - `eza` → `exa` → `ls` for directory listings
+- `procs` → `ps` for process listings
