@@ -29,6 +29,7 @@ These helper commands are added to your PATH.
 | fzf-file      | fzf for files (with find or fd)          |
 | fzf-git       | fzf for git command                      |
 | fzf-glab      | fzf for glab command                     |
+| fzf-podman    | fzf for podman command                   |
 | fzf-grep      | fzf with ripgrep/grep                    |
 | fzf-ps        | fzf for ps command                       |
 | fzf-tmux-pane | fzf for tmux-pane                        |
@@ -72,6 +73,7 @@ These key bindings are defined by default.
 | Ctrl-g Ctrl-g / Ctrl-g g  | fzf-utils::rg-widget               |
 | Ctrl-g Ctrl-h / Ctrl-g h  | fzf-utils::git-hash-widget         |
 | Ctrl-g Ctrl-i / Ctrl-g i  | fzf-utils::docker-image-widget     |
+| Ctrl-g Ctrl-o / Ctrl-g o  | fzf-utils::podman-pod-widget       |
 | Ctrl-g Ctrl-p / Ctrl-g p  | fzf-utils::ps-widget               |
 | Ctrl-g Ctrl-r / Ctrl-g r  | fzf-utils::git-remote-widget       |
 | Ctrl-g Ctrl-s / Ctrl-g s  | fzf-utils::git-stash-widget        |
@@ -83,6 +85,11 @@ These key bindings are defined by default.
 If you dislike this default, set FZF_UTILS_NO_MAPPINGS before loading
 fzf-utils to stop setting default values.
 
+The Ctrl-g c / i / v bindings use the podman widgets when podman is
+installed and the docker widgets otherwise. Set
+FZF_UTILS_CONTAINER_ENGINE to `docker` or `podman` to choose explicitly.
+Ctrl-g o is bound only when the engine is podman.
+
 Ctrl-s is used for terminal flow control by default, so the tmux pane
 widget only works after disabling it with `stty -ixon`.
 
@@ -91,6 +98,7 @@ widget only works after disabling it with `stty -ixon`.
 ### Environment Variables
 
 - `FZF_UTILS_NO_MAPPINGS`: Set this to disable default key bindings
+- `FZF_UTILS_CONTAINER_ENGINE`: Container engine (`docker` or `podman`) for the Ctrl-g c / i / v bindings
 - `FZF_GIT_DEFAULT_DIR`: Default directory for git operations when not in a repository
 - `FZF_GIT_OPTS`: Extra fzf options for `fzf-git` commands (default: `--height 50%`)
 
@@ -109,7 +117,8 @@ Within fzf interfaces, these keys provide additional functionality:
 
 Most commands support subcommands. For example:
 - `fzf-git` supports: branch, file, hash, remote, stash, tag
-- `fzf-docker` supports: container, image, volume
+- `fzf-docker` and `fzf-podman` support: container, image, volume
+- `fzf-podman` also supports: pod
 
 ### State Management
 

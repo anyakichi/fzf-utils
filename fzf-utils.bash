@@ -38,6 +38,26 @@ fzf-utils::_docker-volume() {
     fzf-docker volume "$@"
 }
 
+# Podman container widget
+fzf-utils::_podman-container() {
+    fzf-podman container "$@"
+}
+
+# Podman image widget
+fzf-utils::_podman-image() {
+    fzf-podman image "$@"
+}
+
+# Podman pod widget
+fzf-utils::_podman-pod() {
+    fzf-podman pod "$@"
+}
+
+# Podman volume widget
+fzf-utils::_podman-volume() {
+    fzf-podman volume "$@"
+}
+
 # Git branch widget
 fzf-utils::_git-branch() {
     fzf-git branch "$@"
@@ -167,9 +187,25 @@ fzf-utils::create-widget \
     git-tag \
     glab-issue \
     glab-mr \
+    podman-container \
+    podman-image \
+    podman-pod \
+    podman-volume \
     ps \
     rg
 unset -f fzf-utils::create-widget
+
+# Container engine used by the Ctrl-g c/i/v bindings: podman when it is
+# installed, docker otherwise. Set FZF_UTILS_CONTAINER_ENGINE to choose
+# explicitly.
+_fzf_utils_engine=$FZF_UTILS_CONTAINER_ENGINE
+if [[ -z $_fzf_utils_engine ]]; then
+    if command -v podman >/dev/null 2>&1; then
+        _fzf_utils_engine=podman
+    else
+        _fzf_utils_engine=docker
+    fi
+fi
 
 # Set up key bindings if not disabled
 if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
@@ -202,15 +238,20 @@ if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
     bind -m emacs-standard -x '"\C-g\C-t": fzf-utils::git-tag-widget'
     bind -m emacs-standard -x '"\C-gt": fzf-utils::git-tag-widget'
 
-    # Docker operations
-    bind -m emacs-standard -x '"\C-g\C-c": fzf-utils::docker-container-widget'
-    bind -m emacs-standard -x '"\C-gc": fzf-utils::docker-container-widget'
+    # Container operations
+    bind -m emacs-standard -x "\"\C-g\C-c\": fzf-utils::$_fzf_utils_engine-container-widget"
+    bind -m emacs-standard -x "\"\C-gc\": fzf-utils::$_fzf_utils_engine-container-widget"
 
-    bind -m emacs-standard -x '"\C-g\C-i": fzf-utils::docker-image-widget'
-    bind -m emacs-standard -x '"\C-gi": fzf-utils::docker-image-widget'
+    bind -m emacs-standard -x "\"\C-g\C-i\": fzf-utils::$_fzf_utils_engine-image-widget"
+    bind -m emacs-standard -x "\"\C-gi\": fzf-utils::$_fzf_utils_engine-image-widget"
 
-    bind -m emacs-standard -x '"\C-g\C-v": fzf-utils::docker-volume-widget'
-    bind -m emacs-standard -x '"\C-gv": fzf-utils::docker-volume-widget'
+    bind -m emacs-standard -x "\"\C-g\C-v\": fzf-utils::$_fzf_utils_engine-volume-widget"
+    bind -m emacs-standard -x "\"\C-gv\": fzf-utils::$_fzf_utils_engine-volume-widget"
+
+    if [[ $_fzf_utils_engine == podman ]]; then
+        bind -m emacs-standard -x '"\C-g\C-o": fzf-utils::podman-pod-widget'
+        bind -m emacs-standard -x '"\C-go": fzf-utils::podman-pod-widget'
+    fi
 
     # Other utilities
     bind -m emacs-standard -x '"\C-g\C-p": fzf-utils::ps-widget'
@@ -222,6 +263,7 @@ if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
     # Tmux pane selection
     bind -m emacs-standard -x '"\C-s": fzf-utils::tmux-pane-widget'
 fi
+unset _fzf_utils_engine
 
 # Add bin directory to PATH
 _fzf_utils_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

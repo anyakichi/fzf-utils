@@ -8,6 +8,11 @@ set -o pipefail
 # shellcheck source=./_fzf-common
 . "${0%/*}/_fzf-common"
 
+# The container engine is taken from the command name: fzf-docker runs
+# docker, fzf-podman (a symlink to this script) runs podman.
+ENGINE=${0##*/}
+ENGINE=${ENGINE#fzf-}
+
 containers() {
     local args=()
 
@@ -17,7 +22,7 @@ containers() {
             args+=(-a)
         fi
 
-        docker ps "${args[@]}" "${@:2}"
+        "$ENGINE" ps "${args[@]}" "${@:2}"
         ;;
     toggle-all)
         toggle_boolean S[all]
@@ -37,17 +42,26 @@ fzf-container() {
 }
 
 fzf-image() {
-    docker images |
+    "$ENGINE" images |
         fzf --ansi --multi --header-lines=1 \
-            --bind "ctrl-r:reload(docker images)" \
+            --bind "ctrl-r:reload('$ENGINE' images)" \
             "$@" |
         awk '{print ($2 == "<none>") ? $3 : $1":"$2}'
 }
 
-fzf-volume() {
-    docker volume ls |
+# podman only
+fzf-pod() {
+    "$ENGINE" pod ls |
         fzf --ansi --multi --header-lines=1 \
-            --bind "ctrl-r:reload(docker volume ls)" \
+            --bind "ctrl-r:reload('$ENGINE' pod ls)" \
+            "$@" |
+        awk '{print $2}'
+}
+
+fzf-volume() {
+    "$ENGINE" volume ls |
+        fzf --ansi --multi --header-lines=1 \
+            --bind "ctrl-r:reload('$ENGINE' volume ls)" \
             "$@" |
         awk '{print $2}'
 }
@@ -65,10 +79,13 @@ containers)
 image)
     fzf-image "$@"
     ;;
+pod)
+    fzf-pod "$@"
+    ;;
 volume)
     fzf-volume "$@"
     ;;
 *)
-    die "Usage: $0 {container|containers|image|volume} [args...]"
+    die "Usage: $0 {container|containers|image|pod|volume} [args...]"
     ;;
 esac

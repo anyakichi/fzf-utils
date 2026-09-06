@@ -29,6 +29,22 @@ fzf-utils::_docker-volume() {
     fzf-docker volume "$@"
 }
 
+fzf-utils::_podman-container() {
+    fzf-podman container "$@"
+}
+
+fzf-utils::_podman-image() {
+    fzf-podman image "$@"
+}
+
+fzf-utils::_podman-pod() {
+    fzf-podman pod "$@"
+}
+
+fzf-utils::_podman-volume() {
+    fzf-podman volume "$@"
+}
+
 fzf-utils::_file() {
     setopt localoptions pipefail
     local base dir raw_dir
@@ -264,16 +280,32 @@ fzf-utils::create-widget \
     git-tag \
     glab-issue \
     glab-mr \
+    podman-container \
+    podman-image \
+    podman-pod \
+    podman-volume \
     ps \
     rg
 unset -f fzf-utils::create-widget
+
+# Container engine used by the Ctrl-g c/i/v bindings: podman when it is
+# installed, docker otherwise. Set FZF_UTILS_CONTAINER_ENGINE to choose
+# explicitly.
+_fzf_utils_engine=$FZF_UTILS_CONTAINER_ENGINE
+if [[ -z $_fzf_utils_engine ]]; then
+    if (( $+commands[podman] )); then
+        _fzf_utils_engine=podman
+    else
+        _fzf_utils_engine=docker
+    fi
+fi
 
 if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
     bindkey '^g^b' fzf-utils::git-branch-widget
     bindkey '^gb' fzf-utils::git-branch-widget
 
-    bindkey '^g^c' fzf-utils::docker-container-widget
-    bindkey '^gc' fzf-utils::docker-container-widget
+    bindkey '^g^c' "fzf-utils::$_fzf_utils_engine-container-widget"
+    bindkey '^gc' "fzf-utils::$_fzf_utils_engine-container-widget"
 
     bindkey '^g^f' fzf-utils::git-file-widget
     bindkey '^gf' fzf-utils::git-file-widget
@@ -284,8 +316,8 @@ if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
     bindkey '^g^h' fzf-utils::git-hash-widget
     bindkey '^gh' fzf-utils::git-hash-widget
 
-    bindkey '^g^i' fzf-utils::docker-image-widget
-    bindkey '^gi' fzf-utils::docker-image-widget
+    bindkey '^g^i' "fzf-utils::$_fzf_utils_engine-image-widget"
+    bindkey '^gi' "fzf-utils::$_fzf_utils_engine-image-widget"
 
     bindkey '^g^p' fzf-utils::ps-widget
     bindkey '^gp' fzf-utils::ps-widget
@@ -299,12 +331,18 @@ if [[ -z $FZF_UTILS_NO_MAPPINGS ]]; then
     bindkey '^g^t' fzf-utils::git-tag-widget
     bindkey '^gt' fzf-utils::git-tag-widget
 
-    bindkey '^g^v' fzf-utils::docker-volume-widget
-    bindkey '^gv' fzf-utils::docker-volume-widget
+    bindkey '^g^v' "fzf-utils::$_fzf_utils_engine-volume-widget"
+    bindkey '^gv' "fzf-utils::$_fzf_utils_engine-volume-widget"
+
+    if [[ $_fzf_utils_engine == podman ]]; then
+        bindkey '^g^o' fzf-utils::podman-pod-widget
+        bindkey '^go' fzf-utils::podman-pod-widget
+    fi
 
     bindkey '^_' fzf-utils::cdr-or-file-widget
     bindkey '^r' fzf-utils::history-widget
     bindkey '^s' fzf-utils::tmux-pane-widget
 fi
+unset _fzf_utils_engine
 
 PATH=$PATH:$(cd "$(dirname "$0")" && pwd)/bin
